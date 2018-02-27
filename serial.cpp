@@ -4,6 +4,10 @@
 #include <math.h>
 #include "common.h"
 
+#define mass    0.01
+#define cutoff  0.01
+#define min_r   (cutoff/100)
+
 //
 //  benchmarking program
 //
@@ -34,6 +38,11 @@ int main( int argc, char **argv )
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     set_size( n );
     init_particles( n, particles );
+
+	// Custom initializations to reduce arithmetic in apply_force()
+	//double register mass_inv = 1/mass;
+	//double register cutoff_sq = cutoff * cutoff;
+	//double register min_r_sq = min_r * min_r;
     
     //
     //  simulate a number of time steps
@@ -51,9 +60,39 @@ int main( int argc, char **argv )
         for( int i = 0; i < n; i++ )
         {
             particles[i].ax = particles[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-				apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-        }
+
+	    particle_t* particle = &particles[i];
+
+            for (int j = 0; j < n; j++ ){
+		//apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+		
+		particle_t* neighbor = &particles[j];
+		
+		//apply_force( *particle, *neighbor, &dmin, &davg, &navg );
+		
+		double dx = neighbor->x - particle->x;
+    		double dy = neighbor->y - particle->y;
+    		double r2 = dx * dx + dy * dy;
+    		
+		if( r2 > cutoff*cutoff )
+        		continue;
+		if (r2 != 0){
+	   
+			if (r2/(cutoff*cutoff) < dmin * dmin)
+	      			dmin = sqrt(r2)/cutoff;
+           		davg += sqrt(r2)/cutoff;
+           		navg++;
+        	}
+		
+    		r2 = fmax( r2, min_r*min_r );
+    		double r = sqrt( r2 );
+ 
+		//  very simple short-range repulsive force
+                double coef = ( 1 - cutoff / r ) / r2 / mass;	//( ( r - cutoff ) * mass_inv ) / ( r * r2 );	//( 1 - cutoff / r ) / r2 / mass;
+                particle->ax += coef * dx;
+                particle->ay += coef * dy;
+	     }
+	}
  
         //
         //  move particles

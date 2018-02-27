@@ -4,9 +4,9 @@
 # Intel Compilers are loaded by default; for other compilers please check the module list
 #
 CC = icpc
-MPCC = mpicxx
+MPCC = mpicxx -cxx=icpc
 OPENMP = -qopenmp
-CFLAGS = -O3
+CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops 
 LIBS =
 
 
@@ -39,4 +39,4 @@ common.o: common.cpp common.h
 	$(CC) -c $(CFLAGS) common.cpp
 
 clean:
-	rm -f *.o $(TARGETS) *.stdout *.txt
+	rm -f *.o $(TARGETS) *.stdout *.txt *.optrpt
