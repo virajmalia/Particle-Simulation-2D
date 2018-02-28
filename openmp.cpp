@@ -10,6 +10,7 @@
 //
 int main( int argc, char **argv )
 {   
+
     int navg,nabsavg=0,numthreads; 
     double dmin, absmin=1.0,davg,absavg=0.0;
 	
@@ -33,64 +34,101 @@ int main( int argc, char **argv )
 
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     set_size( n );
+
+    // this applies the "touch by all" method. Were each element will be intialized by each thread. 
+    #pragma omp parallel for 
     init_particles( n, particles );
+
+
+    
+
+    
 
     //
     //  simulate a number of time steps
     //
-    double simulation_time = read_timer( );
+    //double simulation_time = read_timer( );
+    double simulation_time = omp_get_wtime();
 
     #pragma omp parallel private(dmin) 
     {
     numthreads = omp_get_num_threads();
+
+
     for( int step = 0; step < 1000; step++ )
     {
+
+        /// gee a comment here would really save the next person some trouble
         navg = 0;
         davg = 0.0;
-	dmin = 1.0;
+	    dmin = 1.0;
         //
         //  compute all forces
         //
         #pragma omp for reduction (+:navg) reduction(+:davg)
         for( int i = 0; i < n; i++ )
         {
-            particles[i].ax = particles[i].ay = 0;
+            // set the acceloration of all n particle to zero 
+            particles[i].ax = 0;
+            particles[i].ay = 0;
+
+            // apply the force between each particle (particles[i]) and every other particle(j). n*(n-1) interactions 
             for (int j = 0; j < n; j++ )
+            {
+                // this function will update the acel for each particle[i] but there is no dependence on the 
                 apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+            }
         }
         
 		
         //
         //  move particles
-        //
+        // This is not dependent on any other section 
         #pragma omp for
         for( int i = 0; i < n; i++ ) 
-            move( particles[i] );
-  
-        if( find_option( argc, argv, "-no" ) == -1 ) 
         {
-          //
-          //  compute statistical data
-          //
-          #pragma omp master
-          if (navg) { 
-            absavg += davg/navg;
-            nabsavg++;
-          }
-
-          #pragma omp critical
-	  if (dmin < absmin) absmin = dmin; 
-		
-          //
-          //  save if necessary
-          //
-          #pragma omp master
-          if( fsave && (step%SAVEFREQ) == 0 )
-              save( fsave, n, particles );
+            move( particles[i] );
         }
+
+
+        /// convert this into a isolated function 
+        // /// why is this in here? 
+  
+        // if( find_option( argc, argv, "-no" ) == -1 ) 
+        // {
+        //   //
+        //   //  compute statistical data
+        //   //
+        //   #pragma omp master
+        //   if (navg) 
+        //   { 
+        //     absavg += davg/navg;
+        //     nabsavg++;
+        //   }
+
+        //   #pragma omp critical
+        //   //#pragma omp single
+        //   if (dmin < absmin) 
+        //   {
+        //     absmin = dmin; 
+        //   }
+        
+        //   //
+        //   //  save if necessary
+        //   //
+        //   #pragma omp master
+        //   if( fsave && (step%SAVEFREQ) == 0 )
+        //   {
+        //       save( fsave, n, particles );
+        //   }
+        // } //  if( find_option( argc, argv, "-no" ) == -1 ) 
+
+    } //for( int step = 0; step < 1000; step++ )
     }
-}
-    simulation_time = read_timer( ) - simulation_time;
+
+    // this needs to be based on omp_get_wtime() otherwise this will not be correct. 
+   // simulation_time = read_timer( ) - simulation_time;
+    simulation_time = omp_get_wtime() - simulation_time;
     
     printf( "n = %d,threads = %d, simulation time = %g seconds", n,numthreads, simulation_time);
 

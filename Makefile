@@ -4,10 +4,11 @@
 # Intel Compilers are loaded by default; for other compilers please check the module list
 #
 CC = icpc
-MPCC = mpicxx -cxx=icpc
+#CC=g++
+MPCC = mpicxx
 OPENMP = -qopenmp
-CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops 
-LIBS =
+CFLAGS = -O3 -g -Wall -std=gnu99
+LIBS = 
 
 
 TARGETS = serial pthreads openmp mpi autograder
@@ -39,4 +40,4 @@ common.o: common.cpp common.h
 	$(CC) -c $(CFLAGS) common.cpp
 
 clean:
-	rm -f *.o $(TARGETS) *.stdout *.txt *.optrpt
+	rm -f *.o $(TARGETS) *.stdout *.txt

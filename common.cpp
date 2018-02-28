@@ -8,17 +8,9 @@
 #include <sys/time.h>
 #include "common.h"
 
+
+
 double size;
-
-//
-//  tuned constants
-//
-#define density 0.0005
-#define mass    0.01
-#define cutoff  0.01
-#define min_r   (cutoff/100)
-#define dt      0.0005
-
 //
 //  timer
 //
@@ -55,8 +47,11 @@ void init_particles( int n, particle_t *p )
     int sy = (n+sx-1)/sx;
     
     int *shuffle = (int*)malloc( n * sizeof(int) );
+
     for( int i = 0; i < n; i++ )
+    {
         shuffle[i] = i;
+    }
     
     for( int i = 0; i < n; i++ ) 
     {
@@ -85,34 +80,40 @@ void init_particles( int n, particle_t *p )
 //
 //  interact two particles
 //
-void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
-{
+// void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
+// {
 
-    double dx = neighbor.x - particle.x;
-    double dy = neighbor.y - particle.y;
-    double r2 = dx * dx + dy * dy;
-    if( r2 > cutoff*cutoff )
-        return;
-	if (r2 != 0)
-        {
-	   if (r2/(cutoff*cutoff) < *dmin * (*dmin))
-	      *dmin = sqrt(r2)/cutoff;
-           (*davg) += sqrt(r2)/cutoff;
-           (*navg) ++;
-        }
+//     double dx = neighbor.x - particle.x;
+//     double dy = neighbor.y - particle.y;
+
+//     // this takes 17 percent of the time. 
+//     double r2 = dx * dx + dy * dy;   
+//     double r = sqrt( r2 );
+
+//     if( r2 > cutoffSQ )
+//         return;
+// 	if (r2 != 0)
+//     {
+// 	   if (r2/(cutoffSQ) < *dmin * (*dmin))
+//        {
+// 	      *dmin = r*INVCutoff;
+//        }
+//            (*davg) += r*INVCutoff;
+//            (*navg) ++;
+//     }
 		
-    r2 = fmax( r2, min_r*min_r );
-    double r = sqrt( r2 );
+//     r2 = fmax( r2, min_r_SQ);
+//     r = sqrt( r2 );
  
-    
-	
-    //
-    //  very simple short-range repulsive force
-    //
-    double coef = ( 1 - cutoff / r ) / r2 / mass;
-    particle.ax += coef * dx;
-    particle.ay += coef * dy;
-}
+//     //
+//     //  very simple short-range repulsive force
+//     //
+//     double coef = ( 1 - cutoff / r ) / r2 / mass;
+
+
+//     particle.ax += coef * dx;
+//     particle.ay += coef * dy;
+// }
 
 //
 //  integrate the ODE
