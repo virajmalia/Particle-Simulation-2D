@@ -15,7 +15,7 @@ FILE *fsum;
 
 
 void RunSimulation(particle_t * particles,int n);
-void SetStats(particle_t * particles,int n,int step);
+void SetStats(particle_t * particles, const int n,const int step);
 
 //
 //  benchmarking program
@@ -64,13 +64,9 @@ int main( int argc, char **argv )
     //double simulation_time = read_timer( );
     double simulation_time = omp_get_wtime();
 
-    #pragma omp parallel private(dmin) 
-    {
-        numthreads = omp_get_num_threads();
-        // Simulation code was in here 
-        RunSimulation(particles,n);
-
-    }
+    numthreads = omp_get_num_threads();
+    // Simulation code was in here 
+    RunSimulation(particles,n);
 
     //////////////////////////////////////////////////////// END OF SIMULATION //////////////////////////////////////////////////////////////////////////////////////////////
     //simulation_time = read_timer( ) - simulation_time;
@@ -135,43 +131,46 @@ int main( int argc, char **argv )
 
 void RunSimulation(particle_t * particles,int n)
 {
-    for( int step = 0; step < 1000; step++ )
+    #pragma omp parallel private(dmin) 
     {
-        // global vars for some reason 
-        navg = 0;
-        davg = 0.0;
-        dmin = 1.0;
-        //shared(particles) 
-        //  compute all forces
-        #pragma omp for reduction (+:navg) reduction(+:davg)
-        for( int i = 0; i < n; i++ )
+        for( int step = 0; step < 1000; step++ )
         {
-            particles[i].ax = particles[i].ay = 0;
-            for (int j = 0; j < n; j++ )
+            // global vars for some reason 
+            navg = 0;
+            davg = 0.0;
+            dmin = 1.0;
+            //shared(particles) 
+            //  compute all forces
+            #pragma omp for reduction (+:navg) reduction(+:davg) schedule(static) 
+            for( int i = 0; i < n; ++i )
             {
-                apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+                particles[i].ax = particles[i].ay = 0;
+
+                for (int j = 0; j < n; ++j )
+                {
+                    apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+                }
             }
-        }
-        
-        
-        //// need a barrier here to wait for all threads to complete the force updates
-        #pragma omp barrier
+            
+            //// need a barrier here to wait for all threads to complete the force updates
+            #pragma omp barrier
 
-        // once the forces have been applied 
-        #pragma omp for
-        for( int i = 0; i < n; i++ ) 
-        {
-            move( particles[i] );
-        }
+            // once the forces have been applied 
+            #pragma omp for
+            for( int i = 0; i < n; ++i ) 
+            {
+                move( particles[i] );
+            }
 
-        //////////////////////////////////////////////////////// set stats ////////////////////////////////////////////////////////
-        #pragma omp master
-        SetStats(particles,n, step);
+            //////////////////////////////////////////////////////// set stats ////////////////////////////////////////////////////////
+            #pragma omp master
+            SetStats(particles,n, step);
+        }
     }
 }
 
 
-void SetStats(particle_t * particles,int n,int step)
+void SetStats(particle_t * particles, const int n,const int step)
 {
 
       //

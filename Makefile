@@ -6,7 +6,7 @@
 CC = icpc
 MPCC = mpicxx -cxx=icpc
 OPENMP = -qopenmp
-CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops 
+CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops -march=core-avx2 -vec
 LIBS =
 
 
