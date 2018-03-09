@@ -35,9 +35,22 @@ int main( int argc, char **argv )
     FILE *fsave = savename ? fopen( savename, "w" ) : NULL;
     FILE *fsum = sumname ? fopen ( sumname, "a" ) : NULL;
 
-    particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
+    ///////////////////////////////////////////////////////////////// End of input processing ///////////////////////////////////////////////////
+
     set_size( n );
-    init_particles( n, particles );
+
+    // particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
+    // init_particles( n, particles );
+
+    particle_SOA_t *particlesSOA =(particle_SOA_t*)malloc( sizeof(particle_SOA_t));
+    particlesSOA->x = (double*)malloc( n* sizeof(double));
+    particlesSOA->y = (double*)malloc( n* sizeof(double)); 
+    particlesSOA->vx = (double*)malloc( n* sizeof(double));
+    particlesSOA->vy = (double*)malloc( n* sizeof(double));
+    particlesSOA->ax = (double*)malloc( n* sizeof(double));
+    particlesSOA->ay = (double*)malloc( n* sizeof(double));
+
+    init_particles_SOA( n, particlesSOA );
 
 	// Custom initializations to reduce arithmetic in apply_force()
 	//double register mass_inv = 1/mass;
@@ -59,46 +72,54 @@ int main( int argc, char **argv )
         //
         for( int i = 0; i < n; i++ )
         {
-            particles[i].ax = particles[i].ay = 0;
+            //particles[i].ax = particles[i].ay = 0;
+            particlesSOA->ax[i] = 0;
+            particlesSOA->ay[i] = 0;
 
-	    particle_t* particle = &particles[i];
 
-            for (int j = 0; j < n; j++ ){
+            for (int j = 0; j < n; j++ )
+            {
+                apply_force_SOA( &particlesSOA,i, j, &dmin, &davg, &navg);
+
+
 		//apply_force( particles[i], particles[j],&dmin,&davg,&navg);
 		
-		particle_t* neighbor = &particles[j];
+		// particle_t* neighbor = &particles[j];
 		
-		//apply_force( *particle, *neighbor, &dmin, &davg, &navg );
+		// //apply_force( *particle, *neighbor, &dmin, &davg, &navg );
 		
-		double dx = neighbor->x - particle->x;
-    		double dy = neighbor->y - particle->y;
-    		double r2 = dx * dx + dy * dy;
+		// double dx = neighbor->x - particle->x;
+  //   		double dy = neighbor->y - particle->y;
+  //   		double r2 = dx * dx + dy * dy;
     		
-		if( r2 > cutoff*cutoff )
-        		continue;
-		if (r2 != 0){
+		// if( r2 > cutoff*cutoff )
+  //       		continue;
+		// if (r2 != 0){
 	   
-			if (r2/(cutoff*cutoff) < dmin * dmin)
-	      			dmin = sqrt(r2)/cutoff;
-           		davg += sqrt(r2)/cutoff;
-           		navg++;
-        	}
+		// 	if (r2/(cutoff*cutoff) < dmin * dmin)
+	 //      			dmin = sqrt(r2)/cutoff;
+  //          		davg += sqrt(r2)/cutoff;
+  //          		navg++;
+  //       	}
 		
-    		r2 = fmax( r2, min_r*min_r );
-    		double r = sqrt( r2 );
+  //   		r2 = fmax( r2, min_r*min_r );
+  //   		double r = sqrt( r2 );
  
-		//  very simple short-range repulsive force
-                double coef = ( 1 - cutoff / r ) / r2 / mass;	//( ( r - cutoff ) * mass_inv ) / ( r * r2 );	//( 1 - cutoff / r ) / r2 / mass;
-                particle->ax += coef * dx;
-                particle->ay += coef * dy;
-	     }
-	}
+		// //  very simple short-range repulsive force
+  //               double coef = ( 1 - cutoff / r ) / r2 / mass;	//( ( r - cutoff ) * mass_inv ) / ( r * r2 );	//( 1 - cutoff / r ) / r2 / mass;
+  //               particle->ax += coef * dx;
+  //               particle->ay += coef * dy;
+    	     }
+    	}
  
         //
         //  move particles
         //
         for( int i = 0; i < n; i++ ) 
-            move( particles[i] );		
+        {
+            //move( particles[i] );	
+            move_SOA( particlesSOA,i);
+        }
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
@@ -115,7 +136,8 @@ int main( int argc, char **argv )
           //  save if necessary
           //
           if( fsave && (step%SAVEFREQ) == 0 )
-              save( fsave, n, particles );
+              //save( fsave, n, particles );
+            save_SOA( fsave, n, particlesSOA );
         }
     }
     simulation_time = read_timer( ) - simulation_time;
@@ -149,7 +171,18 @@ int main( int argc, char **argv )
     //
     if( fsum )
         fclose( fsum );    
-    free( particles );
+    //free( particles );
+    
+    
+    free(particlesSOA->x);
+    free(particlesSOA->y);
+    free(particlesSOA->vx);
+    free(particlesSOA->vy);
+    free(particlesSOA->ax);
+    free(particlesSOA->ay);
+
+    free(particlesSOA);
+
     if( fsave )
         fclose( fsave );
     

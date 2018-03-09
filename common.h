@@ -24,6 +24,20 @@ typedef struct
 } particle_t;
 
 //
+// particle data structure
+// This is a structure of Array. This was done since the access stride was not 1.
+//By converting to Structure of Arrays we can get an access stride of 1.  
+typedef struct 
+{
+	double * x;
+	double * y; 
+	double * vx;
+	double * vy;
+	double * ax;
+	double * ay;
+
+} particle_SOA_t;
+//
 //  timing routines
 //
 double read_timer( );
@@ -33,8 +47,11 @@ double read_timer( );
 //
 void set_size( int n );
 void init_particles( int n, particle_t *p );
+void init_particles_SOA( int n, particle_SOA_t *p );
+void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg);
 void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg);
 void move( particle_t &p );
+void move_SOA( particle_SOA_t &p,int I);
 
 
 //

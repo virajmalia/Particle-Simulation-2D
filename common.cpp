@@ -50,6 +50,7 @@ void set_size( int n )
     size = sqrt( density * n );
 }
 
+
 //
 //  Initialize the particle positions and velocities
 //
@@ -89,6 +90,52 @@ void init_particles( int n, particle_t *p )
 }
 
 //
+//  Initialize the particle positions and velocities
+//
+void init_particles_SOA( int n, particle_SOA_t *p )
+{
+    srand48( time( NULL ) );
+        
+    int sx = (int)ceil(sqrt((double)n));
+    int sy = (n+sx-1)/sx;
+    
+    int *shuffle = (int*)malloc( n * sizeof(int) );
+    for( int i = 0; i < n; i++ )
+        shuffle[i] = i;
+    
+    for( int i = 0; i < n; i++ ) 
+    {
+        //
+        //  make sure particles are not spatially sorted
+        //
+        int j = lrand48()%(n-i);
+        int k = shuffle[j];
+        shuffle[j] = shuffle[n-i-1];
+        
+        //
+        //  distribute particles evenly to ensure proper spacing
+        //
+        // p[i].x = size*(1.+(k%sx))/(1+sx);
+        // p[i].y = size*(1.+(k/sx))/(1+sy);
+
+        p.x[i] = size*(1.+(k%sx))/(1+sx);
+        p.y[i] = size*(1.+(k%sy))/(1+sy);
+
+        //
+        //  assign random velocities within a bound
+        //
+        // p[i].vx = drand48()*2-1;
+        // p[i].vy = drand48()*2-1;
+
+        p.vx[i] = drand48()*2-1;
+        p.vy[i] = drand48()*2-1;
+    }
+
+
+    free( shuffle );
+}
+
+//
 //  interact two particles
 //
 void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
@@ -113,10 +160,9 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
            (*navg) ++;
     }
 		
-    r2 = fmax( r2, min_r*min_r );
+    r2 = fmax( r2, min_r_SQ );
     r = sqrt( r2 );
  
-    
     //
     //  very simple short-range repulsive force
     //
@@ -125,6 +171,50 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
     particle.ay += coef * dy;
 }
 
+
+//
+//  interact two particles
+//
+void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg)
+{
+
+    // this is a little stupid  since it applies the force in only one direction 
+    // double dx = neighbor.x - particle.x;
+    // double dy = neighbor.y - particle.y;
+
+    double dx = p.x[J] - p.x[I];
+    double dy = p.y[J] - p.y[I];
+
+
+    double r2 = dx * dx + dy * dy;
+    if( r2 > cutoffSQ )
+        return;
+
+    double r = sqrt( r2 );
+
+    if (r2 != 0)
+    {
+       if (r2/(cutoffSQ) < *dmin * (*dmin))
+       {
+          *dmin = r/cutoff;
+       }
+           (*davg) += r/cutoff;
+           (*navg) ++;
+    }
+        
+    r2 = fmax( r2, min_r_SQ);
+    r = sqrt( r2 );
+    //
+    //  very simple short-range repulsive force
+    // but do both at the same time!!!!
+    double coef = ( 1 - cutoff / r ) / r2 / mass;
+    p.ax[I] += coef * dx;
+    p.ay[I] += coef * dy;
+    p.ax[J] -= coef * dx;  // force applied in opposite direction 
+    p.ay[J] -= coef * dy;  // force applied in opposite direction 
+}
+
+/*
 
 void apply_force_vector_4( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
 {
@@ -187,7 +277,7 @@ void apply_force_vector_4( particle_t &particle, particle_t &neighbor , double *
     // particle.ay += coef * dy;
     ParticleAx4 = _mm256_add_pd(ParticleAx4,_mm256_mul_pd(coef4, dx4));
     ParticleAy4 = _mm256_add_pd(ParticleAy4,_mm256_mul_pd(coef4, dy4));
-}
+}*/
 
 
 
@@ -220,9 +310,58 @@ void move( particle_t &p )
     }
 }
 
+void move_SOA( particle_SOA_t &p,int I, int J)
+{
+    //
+    //  slightly simplified Velocity Verlet integration
+    //  conserves energy better than explicit Euler method
+    //
+    p.vx[I] += p.ax[I] * dt;
+    p.vy[I] += p.ay[I] * dt;
+    p.x[I]  += p.vx[I] * dt;
+    p.y[I]  += p.vy[I] * dt;
+
+    p.vx[J] += p.ax[J] * dt;
+    p.vy[J] += p.ay[J] * dt;
+    p.x[J]  += p.vx[J] * dt;
+    p.y[J]  += p.vy[J] * dt;
+
+    //
+    //  bounce from walls
+    //
+    while( p.x[I] < 0 || p.x[I] > size )
+    {
+        p.x[I]  = p.x[I] < 0 ? -p.x[I] : 2*size-p.x[I];
+        p.vx[I] = -p.vx[I];
+    }
+    while( p.y[I] < 0 || p.y[I] > size )
+    {
+        p.y[I]  = p.y[I] < 0 ? -p.y[I] : 2*size-p.y[I];
+        p.vy[I] = -p.vy[I];
+    }
+    while( p.x[J] < 0 || p.x[J] > size )
+    {
+        p.x[J]  = p.x[J] < 0 ? -p.x[J] : 2*size-p.x[J];
+        p.vx[J] = -p.vx[J];
+    }
+    while( p.y[J] < 0 || p.y[J] > size )
+    {
+        p.y[J]  = p.y[J] < 0 ? -p.y[J] : 2*size-p.y[J];
+        p.vy[J] = -p.vy[J];
+    }
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //  I/O routines
 //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void save( FILE *f, int n, particle_t *p )
 {
     static bool first = true;
@@ -235,9 +374,27 @@ void save( FILE *f, int n, particle_t *p )
         fprintf( f, "%g %g\n", p[i].x, p[i].y );
 }
 
+void save_SOA( FILE *f, int n, particle_SOA_t *p )
+{
+    static bool first = true;
+    if( first )
+    {
+        fprintf( f, "%d %g\n", n, size );
+        first = false;
+    }
+    for( int i = 0; i < n; i++ )
+        fprintf( f, "%g %g\n", p.x[i], p.y[i]);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //  command line option processing
 //
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int find_option( int argc, char **argv, const char *option )
 {
     for( int i = 1; i < argc; i++ )
