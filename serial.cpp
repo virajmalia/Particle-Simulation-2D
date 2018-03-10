@@ -77,8 +77,11 @@ int main( int argc, char **argv )
             particlesSOA->ay[i] = 0;
 
 
-            for (int j = 0; j < n; j++ )
+            for (int j = i+1; j < n; j++ )
             {
+                particlesSOA->ax[j] = 0;
+                particlesSOA->ay[j] = 0;
+
                 apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
 
 

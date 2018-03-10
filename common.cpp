@@ -187,7 +187,9 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
     double r2 = dx * dx + dy * dy;
     //printf("PX %f",p->x[J] );
     if( r2 > cutoffSQ )
+    {
         return;
+    }
 
     double r = sqrt( r2 );
 
@@ -197,8 +199,12 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
        {
           *dmin = r/cutoff;
        }
-           (*davg) += r/cutoff;
-           (*navg) ++;
+           // (*davg) += r/cutoff;
+           // (*navg) ++;
+        // since we are doing pairs of particles at the same time. 
+        (*davg) += 2* (r/cutoff);
+        (*navg) += 2;
+
     }
         
     r2 = fmax( r2, min_r_SQ);
@@ -209,8 +215,8 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
     double coef = ( 1 - cutoff / r ) / r2 / mass;
     p->ax[I] += coef * dx;
     p->ay[I] += coef * dy;
-    // p.ax[J] -= coef * dx;  // force applied in opposite direction 
-    // p.ay[J] -= coef * dy;  // force applied in opposite direction 
+    p->ax[J] += coef * dx;  // force applied in opposite direction 
+    p->ay[J] += coef * dy;  // force applied in opposite direction 
 }
 
 /*
