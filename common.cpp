@@ -175,15 +175,15 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
 //
 //  interact two particles
 //
-void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg, int *navg)
+void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg)
 {
 
     // this is a little stupid  since it applies the force in only one direction
     // double dx = neighbor.x - particle.x;
     // double dy = neighbor.y - particle.y;
 
-    double dx = p->x[J] - p->x[I];
-    double dy = p->y[J] - p->y[I];
+    double dx = p.x[J] - p.x[I];
+    double dy = p.y[J] - p.y[I];
     double r2 = dx * dx + dy * dy;
 
     double r = sqrt( r2 );
@@ -208,8 +208,8 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
     //  very simple short-range repulsive force
     // but do both at the same time!!!!
     double coef = ( 1 - cutoff / r ) / r2 / mass;
-    p->ax[I] += coef * dx;
-    p->ay[I] += coef * dy;
+    p.ax[I] += coef * dx;
+    p.ay[I] += coef * dy;
     // p.ax[J] -= coef * dx;  // force applied in opposite direction
     // p.ay[J] -= coef * dy;  // force applied in opposite direction
 }
@@ -316,10 +316,10 @@ void move_SOA( particle_SOA_t &p, int I)
     //  slightly simplified Velocity Verlet integration
     //  conserves energy better than explicit Euler method
     //
-    p->vx[I] += p->ax[I] * dt;
-    p->vy[I] += p->ay[I] * dt;
-    p->x[I]  += p->vx[I] * dt;
-    p->y[I]  += p->vy[I] * dt;
+    p.vx[I] += p.ax[I] * dt;
+    p.vy[I] += p.ay[I] * dt;
+    p.x[I]  += p.vx[I] * dt;
+    p.y[I]  += p.vy[I] * dt;
 
     //
     //  bounce from walls
