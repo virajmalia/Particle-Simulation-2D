@@ -119,7 +119,7 @@ void init_particles_SOA( int n, particle_SOA_t *p )
         // p[i].y = size*(1.+(k/sx))/(1+sy);
 
         p->x[i] = size*(1.+(k%sx))/(1+sx);
-        p->y[i] = size*(1.+(k%sy))/(1+sy);
+        p->y[i] = size*(1.+(k/sx))/(1+sy);
 
         //
         //  assign random velocities within a bound
@@ -184,9 +184,8 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
 
     double dx = p->x[J] - p->x[I];
     double dy = p->y[J] - p->y[I];
-
-
     double r2 = dx * dx + dy * dy;
+    //printf("PX %f",p->x[J] );
     if( r2 > cutoffSQ )
         return;
 
