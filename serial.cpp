@@ -63,10 +63,10 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
 	
     for( int step = 0; step < NSTEPS; step++ )
-    {
-	navg = 0;
+    {   
+        navg = 0;
         davg = 0.0;
-	dmin = 1.0;
+        dmin = 1.0;
         //
         //  compute forces
         //
@@ -79,7 +79,7 @@ int main( int argc, char **argv )
 
             for (int j = 0; j < n; j++ )
             {
-                apply_force_SOA( &particlesSOA,i, j, &dmin, &davg, &navg);
+                apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
 
 
 		//apply_force( particles[i], particles[j],&dmin,&davg,&navg);

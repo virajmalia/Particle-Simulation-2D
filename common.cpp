@@ -118,8 +118,8 @@ void init_particles_SOA( int n, particle_SOA_t *p )
         // p[i].x = size*(1.+(k%sx))/(1+sx);
         // p[i].y = size*(1.+(k/sx))/(1+sy);
 
-        p.x[i] = size*(1.+(k%sx))/(1+sx);
-        p.y[i] = size*(1.+(k%sy))/(1+sy);
+        p->x[i] = size*(1.+(k%sx))/(1+sx);
+        p->y[i] = size*(1.+(k%sy))/(1+sy);
 
         //
         //  assign random velocities within a bound
@@ -127,8 +127,8 @@ void init_particles_SOA( int n, particle_SOA_t *p )
         // p[i].vx = drand48()*2-1;
         // p[i].vy = drand48()*2-1;
 
-        p.vx[i] = drand48()*2-1;
-        p.vy[i] = drand48()*2-1;
+        p->vx[i] = drand48()*2-1;
+        p->vy[i] = drand48()*2-1;
     }
 
 
@@ -175,15 +175,15 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
 //
 //  interact two particles
 //
-void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg)
+void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg, int *navg)
 {
 
     // this is a little stupid  since it applies the force in only one direction 
     // double dx = neighbor.x - particle.x;
     // double dy = neighbor.y - particle.y;
 
-    double dx = p.x[J] - p.x[I];
-    double dy = p.y[J] - p.y[I];
+    double dx = p->x[J] - p->x[I];
+    double dy = p->y[J] - p->y[I];
 
 
     double r2 = dx * dx + dy * dy;
@@ -208,10 +208,10 @@ void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg
     //  very simple short-range repulsive force
     // but do both at the same time!!!!
     double coef = ( 1 - cutoff / r ) / r2 / mass;
-    p.ax[I] += coef * dx;
-    p.ay[I] += coef * dy;
-    p.ax[J] -= coef * dx;  // force applied in opposite direction 
-    p.ay[J] -= coef * dy;  // force applied in opposite direction 
+    p->ax[I] += coef * dx;
+    p->ay[I] += coef * dy;
+    // p.ax[J] -= coef * dx;  // force applied in opposite direction 
+    // p.ay[J] -= coef * dy;  // force applied in opposite direction 
 }
 
 /*
@@ -310,45 +310,45 @@ void move( particle_t &p )
     }
 }
 
-void move_SOA( particle_SOA_t &p,int I, int J)
+void move_SOA( particle_SOA_t *p,int I)
 {
     //
     //  slightly simplified Velocity Verlet integration
     //  conserves energy better than explicit Euler method
     //
-    p.vx[I] += p.ax[I] * dt;
-    p.vy[I] += p.ay[I] * dt;
-    p.x[I]  += p.vx[I] * dt;
-    p.y[I]  += p.vy[I] * dt;
+    p->vx[I] += p->ax[I] * dt;
+    p->vy[I] += p->ay[I] * dt;
+    p->x[I]  += p->vx[I] * dt;
+    p->y[I]  += p->vy[I] * dt;
 
-    p.vx[J] += p.ax[J] * dt;
-    p.vy[J] += p.ay[J] * dt;
-    p.x[J]  += p.vx[J] * dt;
-    p.y[J]  += p.vy[J] * dt;
+    // p.vx[J] += p.ax[J] * dt;
+    // p.vy[J] += p.ay[J] * dt;
+    // p.x[J]  += p.vx[J] * dt;
+    // p.y[J]  += p.vy[J] * dt;
 
     //
     //  bounce from walls
     //
-    while( p.x[I] < 0 || p.x[I] > size )
+    while( p->x[I] < 0 || p->x[I] > size )
     {
-        p.x[I]  = p.x[I] < 0 ? -p.x[I] : 2*size-p.x[I];
-        p.vx[I] = -p.vx[I];
+        p->x[I]  = p->x[I] < 0 ? -p->x[I] : 2*size-p->x[I];
+        p->vx[I] = -p->vx[I];
     }
-    while( p.y[I] < 0 || p.y[I] > size )
+    while( p->y[I] < 0 || p->y[I] > size )
     {
-        p.y[I]  = p.y[I] < 0 ? -p.y[I] : 2*size-p.y[I];
-        p.vy[I] = -p.vy[I];
+        p->y[I]  = p->y[I] < 0 ? -p->y[I] : 2*size-p->y[I];
+        p->vy[I] = -p->vy[I];
     }
-    while( p.x[J] < 0 || p.x[J] > size )
-    {
-        p.x[J]  = p.x[J] < 0 ? -p.x[J] : 2*size-p.x[J];
-        p.vx[J] = -p.vx[J];
-    }
-    while( p.y[J] < 0 || p.y[J] > size )
-    {
-        p.y[J]  = p.y[J] < 0 ? -p.y[J] : 2*size-p.y[J];
-        p.vy[J] = -p.vy[J];
-    }
+    // while( p.x[J] < 0 || p.x[J] > size )
+    // {
+    //     p.x[J]  = p.x[J] < 0 ? -p.x[J] : 2*size-p.x[J];
+    //     p.vx[J] = -p.vx[J];
+    // }
+    // while( p.y[J] < 0 || p.y[J] > size )
+    // {
+    //     p.y[J]  = p.y[J] < 0 ? -p.y[J] : 2*size-p.y[J];
+    //     p.vy[J] = -p.vy[J];
+    // }
 
 }
 
@@ -383,7 +383,9 @@ void save_SOA( FILE *f, int n, particle_SOA_t *p )
         first = false;
     }
     for( int i = 0; i < n; i++ )
-        fprintf( f, "%g %g\n", p.x[i], p.y[i]);
+    {
+        fprintf( f, "%g %g\n", p->x[i], p->y[i]);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
