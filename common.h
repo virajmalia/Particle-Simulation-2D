@@ -48,10 +48,10 @@ double read_timer( );
 void set_size( int n );
 void init_particles( int n, particle_t *p );
 void init_particles_SOA( int n, particle_SOA_t *p );
-void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg);
+void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg, int *navg);
 void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg);
 void move( particle_t &p );
-void move_SOA( particle_SOA_t &p,int I);
+void move_SOA( particle_SOA_t *p,int I);
 
 
 //
