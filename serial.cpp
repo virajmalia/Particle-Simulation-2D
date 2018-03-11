@@ -60,6 +60,9 @@ int main( int argc, char **argv )
     //
     //  simulate a number of time steps
     //
+
+    int loopcount = 0;
+    int count = 0;
     double simulation_time = read_timer( );
 	
     for( int step = 0; step < NSTEPS; step++ )
@@ -67,51 +70,29 @@ int main( int argc, char **argv )
         navg = 0;
         davg = 0.0;
         dmin = 1.0;
+
         //
         //  compute forces
         //
         for( int i = 0; i < n; i++ )
         {
             //particles[i].ax = particles[i].ay = 0;
-            particlesSOA->ax[i] = 0;
-            particlesSOA->ay[i] = 0;
+            //particlesSOA->ax[i] = 0;
+            //particlesSOA->ay[i] = 0;
 
 
             for (int j = i+1; j < n; j++ )
             {
-                particlesSOA->ax[j] = 0;
-                particlesSOA->ay[j] = 0;
+
+                loopcount++;
+            //particlesSOA->ax[j] = 0;
+            //particlesSOA->ay[j] = 0;
 
                 apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
 
 
-		//apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+		      //apply_force( particles[i], particles[j],&dmin,&davg,&navg);
 		
-		// particle_t* neighbor = &particles[j];
-		
-		// //apply_force( *particle, *neighbor, &dmin, &davg, &navg );
-		
-		// double dx = neighbor->x - particle->x;
-  //   		double dy = neighbor->y - particle->y;
-  //   		double r2 = dx * dx + dy * dy;
-    		
-		// if( r2 > cutoff*cutoff )
-  //       		continue;
-		// if (r2 != 0){
-	   
-		// 	if (r2/(cutoff*cutoff) < dmin * dmin)
-	 //      			dmin = sqrt(r2)/cutoff;
-  //          		davg += sqrt(r2)/cutoff;
-  //          		navg++;
-  //       	}
-		
-  //   		r2 = fmax( r2, min_r*min_r );
-  //   		double r = sqrt( r2 );
- 
-		// //  very simple short-range repulsive force
-  //               double coef = ( 1 - cutoff / r ) / r2 / mass;	//( ( r - cutoff ) * mass_inv ) / ( r * r2 );	//( 1 - cutoff / r ) / r2 / mass;
-  //               particle->ax += coef * dx;
-  //               particle->ay += coef * dy;
     	     }
     	}
  
@@ -143,6 +124,9 @@ int main( int argc, char **argv )
             save_SOA( fsave, n, particlesSOA );
         }
     }
+
+    printf( "dmin = %f,davg = %f,navg = %f, loops = %d, applyforcescount = %d \n", dmin, davg, navg, loopcount, count );
+
     simulation_time = read_timer( ) - simulation_time;
     
     printf( "n = %d, simulation time = %g seconds", n, simulation_time);

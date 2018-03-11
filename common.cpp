@@ -184,28 +184,33 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
 
     double dx = p->x[J] - p->x[I];
     double dy = p->y[J] - p->y[I];
+
     double r2 = dx * dx + dy * dy;
-    //printf("PX %f",p->x[J] );
+
+    // If someone wrote comments this code would be much more easy to understand wtf is going on with their metrics.
+    // Not having comments in code is shit practice. I've fired people for not documenting their work. Poor practice. 
+    
     if( r2 > cutoffSQ )
     {
+        //printf(" R2 = %f, dx = %f, dy = %f, I= %d, J= %d \n", r2, dx, dy, I, J);
         return;
     }
 
     double r = sqrt( r2 );
 
-    if (r2 != 0)
-    {
+    // if (r2 != 0)
+    // {
        if (r2/(cutoffSQ) < *dmin * (*dmin))
        {
           *dmin = r/cutoff;
        }
-           // (*davg) += r/cutoff;
+        (*davg) += (r/cutoff);
            // (*navg) ++;
         // since we are doing pairs of particles at the same time. 
-        (*davg) += 2* (r/cutoff);
-        (*navg) += 2;
+        (*navg) ++;
+        //(*navg) ++;
 
-    }
+    //}
         
     r2 = fmax( r2, min_r_SQ);
     r = sqrt( r2 );
@@ -213,10 +218,14 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
     //  very simple short-range repulsive force
     // but do both at the same time!!!!
     double coef = ( 1 - cutoff / r ) / r2 / mass;
-    p->ax[I] += coef * dx;
-    p->ay[I] += coef * dy;
-    p->ax[J] += coef * dx;  // force applied in opposite direction 
-    p->ay[J] += coef * dy;  // force applied in opposite direction 
+
+    double accelX = coef * dx;
+    double accelY = coef * dy;
+
+    p->ax[I] += accelX;
+    p->ay[I] += accelY;
+    p->ax[J] -= accelX;  // force applied in opposite direction 
+    p->ay[J] -= accelY;  // force applied in opposite direction 
 }
 
 /*
@@ -325,6 +334,13 @@ void move_SOA( particle_SOA_t *p,int I)
     p->vy[I] += p->ay[I] * dt;
     p->x[I]  += p->vx[I] * dt;
     p->y[I]  += p->vy[I] * dt;
+
+    // once the force is applied awesome the accel is zero. 
+    p->ax[I] = 0;
+    p->ay[I] = 0;
+
+
+
 
     // p.vx[J] += p.ax[J] * dt;
     // p.vy[J] += p.ay[J] * dt;
