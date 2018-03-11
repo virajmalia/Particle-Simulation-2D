@@ -92,18 +92,18 @@ int main( int argc, char **argv )
 
 
 		      //apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-		
     	     }
+             move_SOA( particlesSOA,i);
     	}
  
         //
         //  move particles
         //
-        for( int i = 0; i < n; i++ ) 
-        {
-            //move( particles[i] );	
-            move_SOA( particlesSOA,i);
-        }
+        // for( int i = 0; i < n; i++ ) 
+        // {
+        //     //move( particles[i] );	
+        //     move_SOA( particlesSOA,i);
+        // }
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
