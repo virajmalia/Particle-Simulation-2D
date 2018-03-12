@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
+#include "force.h"
 
 #define mass    0.01
 #define cutoff  0.01
@@ -12,7 +13,7 @@
 //  benchmarking program
 //
 int main( int argc, char **argv )
-{    
+{
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
 
@@ -26,12 +27,12 @@ int main( int argc, char **argv )
         printf( "-no turns off all correctness checks and particle output\n");
         return 0;
     }
-    
+
     int n = read_int( argc, argv, "-n", 1000 );
 
     char *savename = read_string( argc, argv, "-o", NULL );
     char *sumname = read_string( argc, argv, "-s", NULL );
-    
+
     FILE *fsave = savename ? fopen( savename, "w" ) : NULL;
     FILE *fsum = sumname ? fopen ( sumname, "a" ) : NULL;
 
@@ -44,7 +45,7 @@ int main( int argc, char **argv )
 
     particle_SOA_t *particlesSOA =(particle_SOA_t*)malloc( sizeof(particle_SOA_t));
     particlesSOA->x = (double*)malloc( n* sizeof(double));
-    particlesSOA->y = (double*)malloc( n* sizeof(double)); 
+    particlesSOA->y = (double*)malloc( n* sizeof(double));
     particlesSOA->vx = (double*)malloc( n* sizeof(double));
     particlesSOA->vy = (double*)malloc( n* sizeof(double));
     particlesSOA->ax = (double*)malloc( n* sizeof(double));
@@ -56,7 +57,7 @@ int main( int argc, char **argv )
 	//double register mass_inv = 1/mass;
 	//double register cutoff_sq = cutoff * cutoff;
 	//double register min_r_sq = min_r * min_r;
-    
+
     //
     //  simulate a number of time steps
     //
@@ -64,9 +65,9 @@ int main( int argc, char **argv )
     int loopcount = 0;
     int count = 0;
     double simulation_time = read_timer( );
-	
+
     for( int step = 0; step < NSTEPS; step++ )
-    {   
+    {
         navg = 0;
         davg = 0.0;
         dmin = 1.0;
@@ -95,13 +96,13 @@ int main( int argc, char **argv )
     	     }
              move_SOA( particlesSOA,i);
     	}
- 
+
         //
         //  move particles
         //
-        // for( int i = 0; i < n; i++ ) 
+        // for( int i = 0; i < n; i++ )
         // {
-        //     //move( particles[i] );	
+        //     //move( particles[i] );
         //     move_SOA( particlesSOA,i);
         // }
 
@@ -115,7 +116,7 @@ int main( int argc, char **argv )
             nabsavg++;
           }
           if (dmin < absmin) absmin = dmin;
-		
+
           //
           //  save if necessary
           //
@@ -128,13 +129,13 @@ int main( int argc, char **argv )
     printf( "dmin = %f,davg = %f,navg = %f, loops = %d, applyforcescount = %d \n", dmin, davg, navg, loopcount, count );
 
     simulation_time = read_timer( ) - simulation_time;
-    
+
     printf( "n = %d, simulation time = %g seconds", n, simulation_time);
 
     if( find_option( argc, argv, "-no" ) == -1 )
     {
       if (nabsavg) absavg /= nabsavg;
-    // 
+    //
     //  -the minimum distance absmin between 2 particles during the run of the simulation
     //  -A Correct simulation will have particles stay at greater than 0.4 (of cutoff) with typical values between .7-.8
     //  -A simulation were particles don't interact correctly will be less than 0.4 (of cutoff) with typical values between .01-.05
@@ -145,22 +146,22 @@ int main( int argc, char **argv )
     if (absmin < 0.4) printf ("\nThe minimum distance is below 0.4 meaning that some particle is not interacting");
     if (absavg < 0.8) printf ("\nThe average distance is below 0.8 meaning that most particles are not interacting");
     }
-    printf("\n");     
+    printf("\n");
 
     //
     // Printing summary data
     //
-    if( fsum) 
+    if( fsum)
         fprintf(fsum,"%d %g\n",n,simulation_time);
- 
+
     //
     // Clearing space
     //
     if( fsum )
-        fclose( fsum );    
+        fclose( fsum );
     //free( particles );
-    
-    
+
+
     free(particlesSOA->x);
     free(particlesSOA->y);
     free(particlesSOA->vx);
@@ -172,6 +173,6 @@ int main( int argc, char **argv )
 
     if( fsave )
         fclose( fsave );
-    
+
     return 0;
 }
