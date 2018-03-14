@@ -42,18 +42,18 @@ void set_size( int n )
 void init_particles( int n, particle_t *p )
 {
     srand48( time( NULL ) );
-        
+
     int sx = (int)ceil(sqrt((double)n));
     int sy = (n+sx-1)/sx;
-    
+
     int *shuffle = (int*)malloc( n * sizeof(int) );
 
     for( int i = 0; i < n; i++ )
     {
         shuffle[i] = i;
     }
-    
-    for( int i = 0; i < n; i++ ) 
+
+    for( int i = 0; i < n; i++ )
     {
         //
         //  make sure particles are not spatially sorted
@@ -61,7 +61,7 @@ void init_particles( int n, particle_t *p )
         int j = lrand48()%(n-i);
         int k = shuffle[j];
         shuffle[j] = shuffle[n-i-1];
-        
+
         //
         //  distribute particles evenly to ensure proper spacing
         //
@@ -80,40 +80,40 @@ void init_particles( int n, particle_t *p )
 //
 //  interact two particles
 //
-// void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
-// {
+ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
+ {
 
-//     double dx = neighbor.x - particle.x;
-//     double dy = neighbor.y - particle.y;
+     double dx = neighbor.x - particle.x;
+     double dy = neighbor.y - particle.y;
 
-//     // this takes 17 percent of the time. 
-//     double r2 = dx * dx + dy * dy;   
-//     double r = sqrt( r2 );
+     // this takes 17 percent of the time.
+     double r2 = dx * dx + dy * dy;
+     double r = sqrt( r2 );
 
-//     if( r2 > cutoffSQ )
-//         return;
-// 	if (r2 != 0)
-//     {
-// 	   if (r2/(cutoffSQ) < *dmin * (*dmin))
-//        {
-// 	      *dmin = r*INVCutoff;
-//        }
-//            (*davg) += r*INVCutoff;
-//            (*navg) ++;
-//     }
-		
-//     r2 = fmax( r2, min_r_SQ);
-//     r = sqrt( r2 );
- 
-//     //
-//     //  very simple short-range repulsive force
-//     //
-//     double coef = ( 1 - cutoff / r ) / r2 / mass;
+     if( r2 > cutoffSQ )
+         return;
+ 	   if (r2 != 0)
+     {
+       if (r2/(cutoffSQ) < *dmin * (*dmin))
+       {
+         *dmin = r*INVCutoff;
+       }
 
+       (*davg) += r*INVCutoff;
+       (*navg) ++;
+     }
 
-//     particle.ax += coef * dx;
-//     particle.ay += coef * dy;
-// }
+     r2 = fmax( r2, min_r_SQ);
+     r = sqrt( r2 );
+
+     //
+     //  very simple short-range repulsive force
+     //
+     double coef = ( 1 - cutoff / r ) / r2 / mass;
+
+     particle.ax += coef * dx;
+     particle.ay += coef * dy;
+ }
 
 //
 //  integrate the ODE

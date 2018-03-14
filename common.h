@@ -34,10 +34,10 @@ const int SAVEFREQ = 10;
 //
 // particle data structure
 //
-typedef struct 
+typedef struct
 {
   double x;    /// position X
-  double y;    /// position y 
+  double y;    /// position y
   double vx;   /// velocity x
   double vy;   /// velocity y
   double ax;   /// accel in x
@@ -54,45 +54,8 @@ double read_timer( );
 //
 void set_size( int n );
 void init_particles( int n, particle_t *p );
-//void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg);
+void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg);
 void move( particle_t &p );
-
-inline void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
-{
-
-    double dx = neighbor.x - particle.x;
-    double dy = neighbor.y - particle.y;
-
-    // this takes 17 percent of the time. 
-    double r2 = dx * dx + dy * dy;   
-    double r = sqrt( r2 );
-    double rInvCutoff = r*INVCutoff;
-
-    if( r2 > cutoffSQ )
-        return;
-	if (r2 != 0)
-    {
-	   if (r2/(cutoffSQ) < *dmin * (*dmin))
-       {
-	      *dmin = rInvCutoff;
-       }
-           (*davg) += rInvCutoff;
-           (*navg) ++;
-    }
-		
-    r2 = fmax( r2, min_r_SQ);
-    r = sqrt( r2 );
- 
-    //
-    //  very simple short-range repulsive force
-    //
-    double coef = ( 1 - cutoff / r ) / r2 / mass;
-
-
-    particle.ax += coef * dx;
-    particle.ay += coef * dy;
-}
-
 
 //
 //  I/O routines
