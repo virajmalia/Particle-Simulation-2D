@@ -74,24 +74,6 @@ int main( int argc, char **argv )
    // printf("Vector is %d ",Bins.size() );
 
     //printf("Test 3\n");
-    for(int particle = 0; particle < n; ++particle)
-    {
-          double binsize = getBinSize();
-          //printf("Test4\n");
-    //     // get the bin index
-           int BinX = (int)floor(particlesSOA->x[particle]/binsize);
-           int BinY = (int)floor(particlesSOA->y[particle]/binsize);
-        
-           //printf("Adding particle\n");
-           int BinNum = BinX + NumofBinsEachSide*BinY;
-           printf("Particle added to Bin %d", BinNum);
-           Bins[BinNum].push_back(particle);
-           printf("There are %d particles in this bin\n",Bins[BinNum].size());
-           
-
-    //     //addParticleToBin(n,BinX,BinY);
-
-    }
 
     //printf("BinSize is: %d \n ", Bins[1001].size());
 
@@ -114,39 +96,205 @@ int main( int argc, char **argv )
         davg = 0.0;
         dmin = 1.0;
 
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        for(int clear = 0; clear < NumofBins; clear++ )
+        {
+            Bins[clear].clear();
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // re populate bins after the move update. 
+        for(int particle = 0; particle < n; ++particle)
+        {
+              double binsize = getBinSize();
+              //printf("Test4\n");
+        //     // get the bin index
+               int BinX = (int)floor(particlesSOA->x[particle]/binsize);
+               int BinY = (int)floor(particlesSOA->y[particle]/binsize);
+            
+               //printf("Adding particle\n");
+               int BinNum = BinX + NumofBinsEachSide*BinY;
+               printf("Particle added to Bin %d", BinNum);
+               Bins[BinNum].push_back(particle);
+               printf("There are %d particles in this bin\n",Bins[BinNum].size());
+        //     //addParticleToBin(n,BinX,BinY);
+
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // store the particle indexs from each surrounding bin.
+        std::vector<int> BinMembers; 
+
+        for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
+        {
+            //determine if the bin is in the four courners or edges. 
+            bool Left = ((BinIndex%NumofBinsEachSide) == 0) ? true : false;
+            bool Right = ((BinIndex%NumofBinsEachSide) == (NumofBinsEachSide-1) ) ? true : false;
+            bool Top =  ((BinIndex < NumofBinsEachSide) )? true : false;
+            bool Bottom = ((BinIndex > (NumofBins - NumofBinsEachSide - 1) ) )? true : false;
+
+            // calculate the indexes of surrounding bins. 
+            /// <<West    North ^  East >> 
+            int North = BinIndex - NumofBinsEachSide; 
+            int NorthEast = North + 1; 
+            int NorthWest = North -1;
+            int East = BinIndex + 1;
+            int West = BinIndex -1; 
+            int South = BinIndex + NumofBinsEachSide;
+            int SouthEast = South +1;
+            int SouthWest = South -1;
+
+            // Note: Left = West 
+            // Right = East 
+
+            BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
+
+            // we are not at an edge or a corner. -- Most common case
+            if( ~(Left || Right || Top || Bottom))
+            {
+                //NumofPeerBins = 8;
+                //N NE NW E W S SE SW
+                BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+                BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+                BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin() ,Bins[SouthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+            }
+            // // Top Row 
+            // else if( Top )
+            // {
+            //     // most common case for the top row -- Not in a corner. 
+            //     if(~(Left|| Right))
+            //     {
+            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+            //     }
+            //     else if( ~Left && Right) // Yes this would be called a corner case!!!
+            //     {
+            //         // Right == East
+            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+            //     }
+            //     else // left corner 
+            //     {
+            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+            //     }
+
+            // }
+            // else if( Bottom )
+            // {
+            //     // most common case for the top row -- Not in a corner. 
+            //     if(~(Left|| Right))
+            //     {
+            //         BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+            //     }
+            //     else if( ~Left && Right) // Yes this would be called a corner case!!!
+            //     {
+            //         // Right == East
+            //         BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+            //     }
+            //     else // left corner 
+            //     {
+            //         BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+
+            //     }
+
+            // }
+            // else if(Left)  // not in a corner on the left side
+            // {
+            //     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+            // }
+            // else // must be the right side 
+            // {
+            //     BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+            // }
+
+
+
+
+            for(int calcForceindexI = 0; calcForceindexI < BinMembers.size(); calcForceindexI++ )
+            {
+                // apply forces 
+                for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
+                {
+
+                    apply_force_SOA( particlesSOA,calcForceindexI, calcForceindexJ, &dmin, &davg, &navg);
+
+                 }
+
+            }
+
+            BinMembers.clear();
+
+        } // end of bin calcs
+
+        //move particles
+        
+        for( int i = 0; i < n; i++ ) 
+        {
+            //move( particles[i] );  
+            move_SOA( particlesSOA,i);
+        }
+
+
         //
         //  compute forces
         //
-        for( int i = 0; i < n; i++ )
-        {
-            //particles[i].ax = particles[i].ay = 0;
-            //particlesSOA->ax[i] = 0;
-            //particlesSOA->ay[i] = 0;
+     //    for( int i = 0; i < n; i++ )
+     //    {
+     //        //particles[i].ax = particles[i].ay = 0;
+     //        //particlesSOA->ax[i] = 0;
+     //        //particlesSOA->ay[i] = 0;
 
 
-            for (int j = i+1; j < n; j++ )
-            {
+     //        for (int j = i+1; j < n; j++ )
+     //        {
 
-                loopcount++;
-            //particlesSOA->ax[j] = 0;
-            //particlesSOA->ay[j] = 0;
+     //            loopcount++;
+     //        //particlesSOA->ax[j] = 0;
+     //        //particlesSOA->ay[j] = 0;
 
-                apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
+     //            apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
 
 
-		      //apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-    	     }
-             move_SOA( particlesSOA,i);
-    	}
+		   //    //apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+    	//      }
+     //         move_SOA( particlesSOA,i);
+    	// }
+ 
  
         //
-        //  move particles
-        //
-        // for( int i = 0; i < n; i++ ) 
-        // {
-        //     //move( particles[i] );	
-        //     move_SOA( particlesSOA,i);
-        // }
+
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {

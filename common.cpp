@@ -213,8 +213,8 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
 
     double r = sqrt( r2 );
 
-    // if (r2 != 0)
-    // {
+    if (r2 != 0)
+    {
        if (r2/(cutoffSQ) < *dmin * (*dmin))
        {
           *dmin = r/cutoff;
@@ -225,7 +225,7 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
         (*navg) ++;
         //(*navg) ++;
 
-    //}
+    }
         
     r2 = fmax( r2, min_r_SQ);
     r = sqrt( r2 );
@@ -239,8 +239,8 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
 
     p->ax[I] += accelX;
     p->ay[I] += accelY;
-    p->ax[J] -= accelX;  // force applied in opposite direction 
-    p->ay[J] -= accelY;  // force applied in opposite direction 
+    // p->ax[J] -= accelX;  // force applied in opposite direction 
+    // p->ay[J] -= accelY;  // force applied in opposite direction 
 }
 
 /*
