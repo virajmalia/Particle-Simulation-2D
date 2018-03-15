@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
+#include <vector>
 
 #define mass    0.01
 #define cutoff  0.01
@@ -39,9 +40,12 @@ int main( int argc, char **argv )
 
     set_size( n );
 
+    printf("Num of bins: %d size is: %f BinSize: %f \n", getbinNumber(), getSize(), getBinSize());
+
     // particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     // init_particles( n, particles );
 
+    //printf("Test -1\n");
     particle_SOA_t *particlesSOA =(particle_SOA_t*)malloc( sizeof(particle_SOA_t));
     particlesSOA->x = (double*)malloc( n* sizeof(double));
     particlesSOA->y = (double*)malloc( n* sizeof(double)); 
@@ -50,7 +54,46 @@ int main( int argc, char **argv )
     particlesSOA->ax = (double*)malloc( n* sizeof(double));
     particlesSOA->ay = (double*)malloc( n* sizeof(double));
 
+    /// make bins 
+
+    //printf("Test 0\n");
     init_particles_SOA( n, particlesSOA );
+
+    //vector <int> * v 
+
+    // //matrix of bins 
+    
+    int NumofBinsEachSide = getbinNumber();
+    int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
+    // //std::vector<int> * Bins =( std::vector<int> *)malloc( (NumofBins^2) * sizeof( std::vector<int> ));
+    // //std::vector<std:vector<int>> Bins; 
+    // printf("NumofBinsEachSide %d \n", NumofBinsEachSide);
+    // printf("Num of bins %d \n",NumofBins );
+    std::vector<std::vector<int> > Bins(NumofBins, std::vector<int>(0));
+
+   // printf("Vector is %d ",Bins.size() );
+
+    //printf("Test 3\n");
+    for(int particle = 0; particle < n; ++particle)
+    {
+          double binsize = getBinSize();
+          //printf("Test4\n");
+    //     // get the bin index
+           int BinX = (int)floor(particlesSOA->x[particle]/binsize);
+           int BinY = (int)floor(particlesSOA->y[particle]/binsize);
+        
+           //printf("Adding particle\n");
+           int BinNum = BinX + NumofBinsEachSide*BinY;
+           printf("Particle added to Bin %d", BinNum);
+           Bins[BinNum].push_back(particle);
+           printf("There are %d particles in this bin\n",Bins[BinNum].size());
+           
+
+    //     //addParticleToBin(n,BinX,BinY);
+
+    }
+
+    //printf("BinSize is: %d \n ", Bins[1001].size());
 
 	// Custom initializations to reduce arithmetic in apply_force()
 	//double register mass_inv = 1/mass;
