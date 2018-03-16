@@ -69,6 +69,8 @@ int main( int argc, char **argv )
     // //std::vector<std:vector<int>> Bins; 
     // printf("NumofBinsEachSide %d \n", NumofBinsEachSide);
     // printf("Num of bins %d \n",NumofBins );
+
+    /// Make the vector of vectors. The bins are vectors
     std::vector<std::vector<int> > Bins(NumofBins, std::vector<int>(0));
 
    // printf("Vector is %d ",Bins.size() );
@@ -98,6 +100,8 @@ int main( int argc, char **argv )
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        
+        // clear out the bins since the particles have moved
         for(int clear = 0; clear < NumofBins; clear++ )
         {
             Bins[clear].clear();
@@ -121,7 +125,6 @@ int main( int argc, char **argv )
                Bins[BinNum].push_back(particle);
                //printf("There are %d particles in this bin\n",Bins[BinNum].size());
         //     //addParticleToBin(n,BinX,BinY);
-
         }
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,6 +133,7 @@ int main( int argc, char **argv )
         // store the particle indexs from each surrounding bin.
         std::vector<int> BinMembers; 
 
+        // for each bin apply forces fromparticles within the cutoff distance.
         for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
         {
             //determine if the bin is in the four courners or edges. 
@@ -154,7 +158,9 @@ int main( int argc, char **argv )
             // Note: Left = West 
             // Right = East 
 
-            //BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
+            /// NOW! Take all the particles in each of the bins and apply forces across all 9 bins.
+            // We are always going to apply forces within a bin we are intrested in
+            BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
 
             // we are not at an edge or a corner. -- Most common case
             if( (Left | Right | Top | Bottom) == false)
