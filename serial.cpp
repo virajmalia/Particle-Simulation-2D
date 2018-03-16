@@ -14,6 +14,10 @@
 //
 int main( int argc, char **argv )
 {    
+
+    // debugging output
+    char *outname = (char*) malloc(32* sizeof(char));
+
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
 
@@ -160,11 +164,13 @@ int main( int argc, char **argv )
 
             /// NOW! Take all the particles in each of the bins and apply forces across all 9 bins.
             // We are always going to apply forces within a bin we are intrested in
-            BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
+            //BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
 
             // we are not at an edge or a corner. -- Most common case
             if( (Left | Right | Top | Bottom) == false)
             {
+
+                //printf("ALL %d ", BinIndex );
                 //NumofPeerBins = 8;
                 //N NE NW E W S SE SW
                 //printf("Test1 %d ", BinIndex);
@@ -192,6 +198,7 @@ int main( int argc, char **argv )
                 // most common case for the top row -- Not in a corner. 
                 if( (Left| Right) == false)
                 {
+                    //printf("Top Row %d ", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
@@ -200,6 +207,7 @@ int main( int argc, char **argv )
                 }
                 else if( (not Left) & Right) // Yes this would be called a corner case!!!
                 {
+                    //printf("Top Row Right %d ", BinIndex );
                     // Right == East
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
@@ -207,6 +215,7 @@ int main( int argc, char **argv )
                 }
                 else // left corner 
                 {
+                    //printf("Top Row Left %d ", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
@@ -218,6 +227,7 @@ int main( int argc, char **argv )
                 // most common case for the top row -- Not in a corner. 
                 if((Left | Right) == false)
                 {
+                    //printf("Bottom Row %d ", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
@@ -227,12 +237,14 @@ int main( int argc, char **argv )
                 else if( (not Left) & Right) // Yes this would be called a corner case!!!
                 {
                     // Right == East
+                    //printf("Bottom Row Right %d ", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                 }
                 else // left corner 
                 {
+                    //printf("Bottom Row Left %d ", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
@@ -242,6 +254,7 @@ int main( int argc, char **argv )
             }
             else if(Left)  // not in a corner on the left side
             {
+                //printf("Left %d ", BinIndex );
                 BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                 BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                 BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
@@ -250,6 +263,7 @@ int main( int argc, char **argv )
             }
             else // must be the right side 
             {
+                //printf("Right %d ", BinIndex );
                 BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
                 BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                 BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
@@ -260,13 +274,16 @@ int main( int argc, char **argv )
 
 
 
-            for(int calcForceindexI = 0; calcForceindexI < BinMembers.size(); calcForceindexI++ )
+            for(int calcForceindexI = 0; calcForceindexI < Bins[BinIndex].size(); calcForceindexI++ )
             {
                 // apply forces 
+                int ParticleThisBin = Bins[BinIndex][calcForceindexI];
+
+
                 for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
                 {
-
-                    apply_force_SOA( particlesSOA,calcForceindexI, calcForceindexJ, &dmin, &davg, &navg);
+                      printf("Interaction");
+                    apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
 
                  }
             }
@@ -311,6 +328,12 @@ int main( int argc, char **argv )
  
  
         //
+
+        sprintf( outname, "out/fout-%05d.txt", step );
+
+        FILE *fout = fopen( outname, "w");
+        save_SOA( fout, n, particlesSOA);
+        fclose( fout );
 
 
         if( find_option( argc, argv, "-no" ) == -1 )
