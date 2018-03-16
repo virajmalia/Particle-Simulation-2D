@@ -51,8 +51,8 @@ void set_size( int n )
 }
 
 int getbinNumber()
-{   
-    // need to round up for partial bins 
+{
+    // need to round up for partial bins
     return (int)ceil( size/cutoff);
 }
 
@@ -72,15 +72,15 @@ double getBinSize()
 void init_particles( int n, particle_t *p )
 {
     srand48( time( NULL ) );
-        
+
     int sx = (int)ceil(sqrt((double)n));
     int sy = (n+sx-1)/sx;
-    
+
     int *shuffle = (int*)malloc( n * sizeof(int) );
     for( int i = 0; i < n; i++ )
         shuffle[i] = i;
-    
-    for( int i = 0; i < n; i++ ) 
+
+    for( int i = 0; i < n; i++ )
     {
         //
         //  make sure particles are not spatially sorted
@@ -88,7 +88,7 @@ void init_particles( int n, particle_t *p )
         int j = lrand48()%(n-i);
         int k = shuffle[j];
         shuffle[j] = shuffle[n-i-1];
-        
+
         //
         //  distribute particles evenly to ensure proper spacing
         //
@@ -110,15 +110,15 @@ void init_particles( int n, particle_t *p )
 void init_particles_SOA( int n, particle_SOA_t *p )
 {
     srand48( time( NULL ) );
-        
+
     int sx = (int)ceil(sqrt((double)n));
     int sy = (n+sx-1)/sx;
-    
+
     int *shuffle = (int*)malloc( n * sizeof(int) );
     for( int i = 0; i < n; i++ )
         shuffle[i] = i;
-    
-    for( int i = 0; i < n; i++ ) 
+
+    for( int i = 0; i < n; i++ )
     {
         //
         //  make sure particles are not spatially sorted
@@ -126,7 +126,7 @@ void init_particles_SOA( int n, particle_SOA_t *p )
         int j = lrand48()%(n-i);
         int k = shuffle[j];
         shuffle[j] = shuffle[n-i-1];
-        
+
         //
         //  distribute particles evenly to ensure proper spacing
         //
@@ -156,7 +156,7 @@ void init_particles_SOA( int n, particle_SOA_t *p )
 void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
 {
 
-    // this is a little stupid  since it applies the force in only one direction 
+    // this is a little stupid  since it applies the force in only one direction
     double dx = neighbor.x - particle.x;
     double dy = neighbor.y - particle.y;
     double r2 = dx * dx + dy * dy;
@@ -174,10 +174,10 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
            (*davg) += r/cutoff;
            (*navg) ++;
     }
-		
+
     r2 = fmax( r2, min_r_SQ );
     r = sqrt( r2 );
- 
+
     //
     //  very simple short-range repulsive force
     //
@@ -190,21 +190,18 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
 //
 //  interact two particles
 //
-void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg, int *navg)
+void apply_force_SOA( particle_SOA_t &p, int I, int J, double *dmin, double *davg, int *navg)
 {
 
-    // this is a little stupid  since it applies the force in only one direction 
+    // this is a little stupid  since it applies the force in only one direction
     // double dx = neighbor.x - particle.x;
     // double dy = neighbor.y - particle.y;
 
-    double dx = p->x[J] - p->x[I];
-    double dy = p->y[J] - p->y[I];
+    double dx = p.x[J] - p.x[I];
+    double dy = p.y[J] - p.y[I];
 
     double r2 = dx * dx + dy * dy;
 
-    // If someone wrote comments this code would be much more easy to understand wtf is going on with their metrics.
-    // Not having comments in code is shit practice. I've fired people for not documenting their work. Poor practice. 
-    
     if( r2 > cutoffSQ )
     {
         //printf(" R2 = %f, dx = %f, dy = %f, I= %d, J= %d \n", r2, dx, dy, I, J);
@@ -212,21 +209,19 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
     }
 
     double r = sqrt( r2 );
+    double dist = r/cutoff;
 
     if (r2 != 0)
     {
-       if (r2/(cutoffSQ) < *dmin * (*dmin))
+       if (dist < *dmin)
        {
-          *dmin = r/cutoff;
+          *dmin = dist;
        }
-        (*davg) += (r/cutoff);
-           // (*navg) ++;
-        // since we are doing pairs of particles at the same time. 
+        (*davg) += dist;
+        // since we are doing pairs of particles at the same time.
         (*navg) ++;
-        //(*navg) ++;
-
     }
-        
+
     r2 = fmax( r2, min_r_SQ);
     r = sqrt( r2 );
     //
@@ -237,78 +232,11 @@ void apply_force_SOA( particle_SOA_t *p,int I, int J, double *dmin, double *davg
     double accelX = coef * dx;
     double accelY = coef * dy;
 
-    p->ax[I] += accelX;
-    p->ay[I] += accelY;
-    // p->ax[J] -= accelX;  // force applied in opposite direction 
-    // p->ay[J] -= accelY;  // force applied in opposite direction 
+    p.ax[I] += accelX;
+    p.ay[I] += accelY;
+    // p->ax[J] -= accelX;  // force applied in opposite direction
+    // p->ay[J] -= accelY;  // force applied in opposite direction
 }
-
-/*
-
-void apply_force_vector_4( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
-{
-
-
-
-    const double SubCutoff =  1 - cutoff; 
-    const double MassConst = mass; 
-
-    __m256d ParticleX4, ParticleY4, NeighborX4, NeighborY4, dx4, dy4, r2_4, r_4, SubCutoff4, Mass4, ParticleAx4,ParticleAy4;
-
-    SubCutoff4 = _mm256_broadcast_sd(&SubCutoff);
-    Mass4  = _mm256_broadcast_sd(&MassConst);
-     
-
-    //    double dx = neighbor.x - particle.x;
-    //    double dy = neighbor.y - particle.y;
-
-    ParticleX4 = _mm256_set_pd((particle).x,(particle+1).x,(particle+2).x,(particle+3).x);
-    ParticleY4 = _mm256_set_pd(particle[0].y,particle[1].y,particle[2].y,particle[3].y);
-    NeighborX4 = _mm256_set_pd(neighbor[0].x,neighbor[1].x,neighbor[2].x,neighbor[3].x);
-    NeighborY4 = _mm256_set_pd(neighbor[0].y,neighbor[1].y,neighbor[2].y,neighbor[3].y);
-
-    dx4 = _mm256_sub_pd(NeighborX4, ParticleX4);
-    dy4 = _mm256_sub_pd(NeighborY4, ParticleY4);
-
-    // calculate r squared 
-    r2_4 = _mm256_sub_pd(_mm256_mul_pd(dx4,dx4),_mm256_mul_pd(dy4,dy4));
-    // get r
-    r_4 = _mm256_sqrt_pd(r2_4);
-
-
-    // if( r2 > cutoffSQ )
-    //     return;
-
-    // double r = sqrt( r2 );
-
-    // if (r2 != 0)
-    // {
-    //    if (r2/(cutoffSQ) < *dmin * (*dmin))
-    //    {
-    //       *dmin = r/cutoff;
-    //    }   
-    //        (*davg) += r/cutoff;
-    //        (*navg) ++;
-    // }
-        
-    // r2 = fmax( r2, min_r_SQ );
-
-
-    // r = sqrt( r2 );
-    
-    //
-    //  very simple short-range repulsive force
-    //
-    // double coef = ( SubCutoff / r ) / r2 / mass;
-    coef4 = _mm256_div_pd(_mm256_div_pd(_mm256_div_pd(SubCutoff4,r_4),r2_4),Mass4);
-
-    // particle.ax += coef * dx;
-    // particle.ay += coef * dy;
-    ParticleAx4 = _mm256_add_pd(ParticleAx4,_mm256_mul_pd(coef4, dx4));
-    ParticleAy4 = _mm256_add_pd(ParticleAy4,_mm256_mul_pd(coef4, dy4));
-}*/
-
-
 
 //
 //  integrate the ODE
@@ -339,52 +267,34 @@ void move( particle_t &p )
     }
 }
 
-void move_SOA( particle_SOA_t *p,int I)
+void move_SOA( particle_SOA_t &p,int I)
 {
     //
     //  slightly simplified Velocity Verlet integration
     //  conserves energy better than explicit Euler method
     //
-    p->vx[I] += p->ax[I] * dt;
-    p->vy[I] += p->ay[I] * dt;
-    p->x[I]  += p->vx[I] * dt;
-    p->y[I]  += p->vy[I] * dt;
+    p.vx[I] += p.ax[I] * dt;
+    p.vy[I] += p.ay[I] * dt;
+    p.x[I]  += p.vx[I] * dt;
+    p.y[I]  += p.vy[I] * dt;
 
-    // once the force is applied awesome the accel is zero. 
-    p->ax[I] = 0;
-    p->ay[I] = 0;
-
-
-
-
-    // p.vx[J] += p.ax[J] * dt;
-    // p.vy[J] += p.ay[J] * dt;
-    // p.x[J]  += p.vx[J] * dt;
-    // p.y[J]  += p.vy[J] * dt;
+    // once the force is applied awesome the accel is zero.
+    p.ax[I] = 0;
+    p.ay[I] = 0;
 
     //
     //  bounce from walls
     //
-    while( p->x[I] < 0 || p->x[I] > size )
+    while( p.x[I] < 0 || p.x[I] > size )
     {
-        p->x[I]  = p->x[I] < 0 ? -p->x[I] : 2*size-p->x[I];
-        p->vx[I] = -p->vx[I];
+        p.x[I]  = p.x[I] < 0 ? -p.x[I] : 2*size-p.x[I];
+        p.vx[I] = -p.vx[I];
     }
-    while( p->y[I] < 0 || p->y[I] > size )
+    while( p.y[I] < 0 || p.y[I] > size )
     {
-        p->y[I]  = p->y[I] < 0 ? -p->y[I] : 2*size-p->y[I];
-        p->vy[I] = -p->vy[I];
+        p.y[I]  = p.y[I] < 0 ? -p.y[I] : 2*size-p.y[I];
+        p.vy[I] = -p.vy[I];
     }
-    // while( p.x[J] < 0 || p.x[J] > size )
-    // {
-    //     p.x[J]  = p.x[J] < 0 ? -p.x[J] : 2*size-p.x[J];
-    //     p.vx[J] = -p.vx[J];
-    // }
-    // while( p.y[J] < 0 || p.y[J] > size )
-    // {
-    //     p.y[J]  = p.y[J] < 0 ? -p.y[J] : 2*size-p.y[J];
-    //     p.vy[J] = -p.vy[J];
-    // }
 
 }
 
