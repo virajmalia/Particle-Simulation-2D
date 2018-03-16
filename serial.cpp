@@ -112,14 +112,14 @@ int main( int argc, char **argv )
               double binsize = getBinSize();
               //printf("Test4\n");
         //     // get the bin index
-               int BinX = (int)floor(particlesSOA->x[particle]/binsize);
-               int BinY = (int)floor(particlesSOA->y[particle]/binsize);
+               int BinX = (int)(particlesSOA->x[particle]/binsize);
+               int BinY = (int)(particlesSOA->y[particle]/binsize);
             
                //printf("Adding particle\n");
                int BinNum = BinX + NumofBinsEachSide*BinY;
-               printf("Particle added to Bin %d", BinNum);
+               //printf("Particle added to Bin %d", BinNum);
                Bins[BinNum].push_back(particle);
-               printf("There are %d particles in this bin\n",Bins[BinNum].size());
+               //printf("There are %d particles in this bin\n",Bins[BinNum].size());
         //     //addParticleToBin(n,BinX,BinY);
 
         }
@@ -149,95 +149,107 @@ int main( int argc, char **argv )
             int SouthEast = South +1;
             int SouthWest = South -1;
 
+            //printf("North %d NorthEast %d NorthWest %d, East %d, West %d, South %d, SouthEast %d, SouthWest %d",North,NorthEast,NorthWest,East, West,South, SouthEast,SouthWest  );
+
             // Note: Left = West 
             // Right = East 
 
-            BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
+            //BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
 
             // we are not at an edge or a corner. -- Most common case
-            if( ~(Left || Right || Top || Bottom))
+            if( (Left | Right | Top | Bottom) == false)
             {
                 //NumofPeerBins = 8;
                 //N NE NW E W S SE SW
+                //printf("Test1 %d ", BinIndex);
                 BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+                // printf("Test2");
+                BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+                // printf("Test3");
+                BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+                // printf("Test4");
+                BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                // printf("Test5");
+                BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                // printf("Test6");
+                BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin() ,Bins[SouthWest].end());
+                //printf("Test7");
+                BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                //printf("Test8");
+                BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                //printf("Testlast");
+            }
+            //printf("After");
+            // Top Row 
+            else if( Top )
+            {
+                // most common case for the top row -- Not in a corner. 
+                if( (Left| Right) == false)
+                {
+                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                    BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                    BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                }
+                else if( (not Left) & Right) // Yes this would be called a corner case!!!
+                {
+                    // Right == East
+                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                    BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                }
+                else // left corner 
+                {
+                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                    BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                    BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                }
+
+            }
+            else if( Bottom )
+            {
+                // most common case for the top row -- Not in a corner. 
+                if((Left | Right) == false)
+                {
+                    BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                }
+                else if( (not Left) & Right) // Yes this would be called a corner case!!!
+                {
+                    // Right == East
+                    BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                }
+                else // left corner 
+                {
+                    BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+
+                }
+
+            }
+            else if(Left)  // not in a corner on the left side
+            {
                 BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                 BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
-                BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                 BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-                BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin() ,Bins[SouthWest].end());
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                 BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
             }
-            // // Top Row 
-            // else if( Top )
-            // {
-            //     // most common case for the top row -- Not in a corner. 
-            //     if(~(Left|| Right))
-            //     {
-            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
-            //     }
-            //     else if( ~Left && Right) // Yes this would be called a corner case!!!
-            //     {
-            //         // Right == East
-            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-            //     }
-            //     else // left corner 
-            //     {
-            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
-            //     }
-
-            // }
-            // else if( Bottom )
-            // {
-            //     // most common case for the top row -- Not in a corner. 
-            //     if(~(Left|| Right))
-            //     {
-            //         BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-            //     }
-            //     else if( ~Left && Right) // Yes this would be called a corner case!!!
-            //     {
-            //         // Right == East
-            //         BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-            //     }
-            //     else // left corner 
-            //     {
-            //         BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
-            //         BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-
-            //     }
-
-            // }
-            // else if(Left)  // not in a corner on the left side
-            // {
-            //     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
-            // }
-            // else // must be the right side 
-            // {
-            //     BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
-            //     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-            // }
+            else // must be the right side 
+            {
+                BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+                BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+            }
 
 
 
@@ -251,7 +263,6 @@ int main( int argc, char **argv )
                     apply_force_SOA( particlesSOA,calcForceindexI, calcForceindexJ, &dmin, &davg, &navg);
 
                  }
-
             }
 
             BinMembers.clear();
