@@ -350,10 +350,6 @@ void move_SOA( particle_SOA_t *p,int I)
     p->x[I]  += p->vx[I] * dt;
     p->y[I]  += p->vy[I] * dt;
 
-    // once the force is applied awesome the accel is zero. 
-    p->ax[I] = 0;
-    p->ay[I] = 0;
-
 
 
 

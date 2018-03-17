@@ -5,21 +5,30 @@
 #include "common.h"
 #include <vector>
 
-#define mass    0.01
-#define cutoff  0.01
-#define min_r   (cutoff/100)
+// this is for the viz script 
+#define VIZ
 
+void printVector(std::vector<int> A)
+{
+    printf("Vector: ");
+    for(int y=0; y< A.size(); y++)
+    {
+        printf("%d ",A[y]);
+    }
+    printf("\n");
+
+}
 //
 //  benchmarking program
 //
 int main( int argc, char **argv )
 {    
-
-    // debugging output
-    char *outname = (char*) malloc(32* sizeof(char));
-
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
+
+    #ifdef VIZ
+        char *outname = (char*) malloc(32* sizeof(char));
+    #endif
 
     if( find_option( argc, argv, "-h" ) >= 0 )
     {
@@ -40,33 +49,21 @@ int main( int argc, char **argv )
     FILE *fsave = savename ? fopen( savename, "w" ) : NULL;
     FILE *fsum = sumname ? fopen ( sumname, "a" ) : NULL;
 
-    ///////////////////////////////////////////////////////////////// End of input processing ///////////////////////////////////////////////////
+    particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
+
+    // particle_SOA_t *particlesSOA =(particle_SOA_t*)malloc( sizeof(particle_SOA_t));
+    // particlesSOA->x = (double*)malloc( n* sizeof(double));
+    // particlesSOA->y = (double*)malloc( n* sizeof(double)); 
+    // particlesSOA->vx = (double*)malloc( n* sizeof(double));
+    // particlesSOA->vy = (double*)malloc( n* sizeof(double));
+    // particlesSOA->ax = (double*)malloc( n* sizeof(double));
+    // particlesSOA->ay = (double*)malloc( n* sizeof(double));
 
     set_size( n );
+    init_particles( n, particles );
 
-    printf("Num of bins: %d size is: %f BinSize: %f \n", getbinNumber(), getSize(), getBinSize());
+    //init_particles_SOA( n, particlesSOA );
 
-    // particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
-    // init_particles( n, particles );
-
-    //printf("Test -1\n");
-    particle_SOA_t *particlesSOA =(particle_SOA_t*)malloc( sizeof(particle_SOA_t));
-    particlesSOA->x = (double*)malloc( n* sizeof(double));
-    particlesSOA->y = (double*)malloc( n* sizeof(double)); 
-    particlesSOA->vx = (double*)malloc( n* sizeof(double));
-    particlesSOA->vy = (double*)malloc( n* sizeof(double));
-    particlesSOA->ax = (double*)malloc( n* sizeof(double));
-    particlesSOA->ay = (double*)malloc( n* sizeof(double));
-
-    /// make bins 
-
-    //printf("Test 0\n");
-    init_particles_SOA( n, particlesSOA );
-
-    //vector <int> * v 
-
-    // //matrix of bins 
-    
     int NumofBinsEachSide = getbinNumber();
     int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
     // //std::vector<int> * Bins =( std::vector<int> *)malloc( (NumofBins^2) * sizeof( std::vector<int> ));
@@ -76,36 +73,21 @@ int main( int argc, char **argv )
 
     /// Make the vector of vectors. The bins are vectors
     std::vector<std::vector<int> > Bins(NumofBins, std::vector<int>(0));
-
-   // printf("Vector is %d ",Bins.size() );
-
-    //printf("Test 3\n");
-
-    //printf("BinSize is: %d \n ", Bins[1001].size());
-
-	// Custom initializations to reduce arithmetic in apply_force()
-	//double register mass_inv = 1/mass;
-	//double register cutoff_sq = cutoff * cutoff;
-	//double register min_r_sq = min_r * min_r;
     
     //
     //  simulate a number of time steps
     //
 
-    int loopcount = 0;
-    int count = 0;
-    double simulation_time = read_timer( );
-	
-    for( int step = 0; step < NSTEPS; step++ )
-    {   
-        navg = 0;
-        davg = 0.0;
-        dmin = 1.0;
+    printf("Num of bins: %d size is: %f BinSize: %f \n", getbinNumber(), getSize(), getBinSize());
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        
-        // clear out the bins since the particles have moved
+    double simulation_time = read_timer( );
+    
+    for( int step = 0; step < NSTEPS; step++ )
+    {
+       navg = 0;
+       davg = 0.0;
+       dmin = 1.0;
+
         for(int clear = 0; clear < NumofBins; clear++ )
         {
             Bins[clear].clear();
@@ -115,37 +97,83 @@ int main( int argc, char **argv )
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // re populate bins after the move update. 
+
+        std::vector<int> BinsWithParticles;
+
         for(int particle = 0; particle < n; ++particle)
         {
+            // CHECKED///////////////////////
               double binsize = getBinSize();
               //printf("Test4\n");
         //     // get the bin index
-               int BinX = (int)(particlesSOA->x[particle]/binsize);
-               int BinY = (int)(particlesSOA->y[particle]/binsize);
+
+
+               int BinX = (int)(particles[particle].x/binsize);
+               int BinY = (int)(particles[particle].y/binsize);
+
+               // int BinX = (int)(particlesSOA->x[particle]/binsize);
+               // int BinY = (int)(particlesSOA->y[particle]/binsize);
             
                //printf("Adding particle\n");
                int BinNum = BinX + NumofBinsEachSide*BinY;
                //printf("Particle added to Bin %d", BinNum);
                Bins[BinNum].push_back(particle);
-               //printf("There are %d particles in this bin\n",Bins[BinNum].size());
+
+               // store the bin which contain a particle. We will ignore the empty ones
+               BinsWithParticles.push_back(BinNum);
+
+               // int BinX = (int)(particlesSOA->x[particle]/binsize);
+               // int BinY = (int)(particlesSOA->y[particle]/binsize);
+
+               particles[particle].ax = particles[particle].ay = 0;
+
+               //particlesSOA->ax[particle] = 0;
+               //particlesSOA->ay[particle] = 0;
+
+
+               //printf("P %d X: %f Y: %f BinNum: %d \n", particle,particles[particle].x, particles[particle].y,BinNum );
+               //printf("There are %d particles in bin %d\n",Bins[BinNum].size(),BinNum );
         //     //addParticleToBin(n,BinX,BinY);
         }
 
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //
+        //  compute forces
+        //
+    //     for( int i = 0; i < n; i++ )
+    //     {
+    //         particles[i].ax = particles[i].ay = 0;
+    //         for (int j = 0; j < n; j++ )
+                // apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+    //     }
+
 
         // store the particle indexs from each surrounding bin.
         std::vector<int> BinMembers; 
 
         // for each bin apply forces fromparticles within the cutoff distance.
-        for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
+        //for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
+        for(int Index = 0; Index < BinsWithParticles.size(); Index++ )
         {
+
+            // this is a vector of the bins with particles. We don't care about empty bins. 
+            int BinIndex = BinsWithParticles[Index];
+
+         // if(Bins[BinIndex].size() > 0)
+         // {
+            //printf("#########################################################\n");
+            //printf("Bin number %d \n",BinIndex );
+            //printf("#########################################################\n");
+            /////////CHECKED !!!
             //determine if the bin is in the four courners or edges. 
             bool Left = ((BinIndex%NumofBinsEachSide) == 0) ? true : false;
             bool Right = ((BinIndex%NumofBinsEachSide) == (NumofBinsEachSide-1) ) ? true : false;
             bool Top =  ((BinIndex < NumofBinsEachSide) )? true : false;
             bool Bottom = ((BinIndex > (NumofBins - NumofBinsEachSide - 1) ) )? true : false;
 
+            //printf("BinIndex %d Left %d Right %d Top %d Bottom %d\n",BinIndex,Left,Right,Top,Bottom); 
+
+            ///////////CHECKED
             // calculate the indexes of surrounding bins. 
             /// <<West    North ^  East >> 
             int North = BinIndex - NumofBinsEachSide; 
@@ -157,20 +185,21 @@ int main( int argc, char **argv )
             int SouthEast = South +1;
             int SouthWest = South -1;
 
-            //printf("North %d NorthEast %d NorthWest %d, East %d, West %d, South %d, SouthEast %d, SouthWest %d",North,NorthEast,NorthWest,East, West,South, SouthEast,SouthWest  );
+            //printf(" BinIndex %d North %d NorthEast %d NorthWest %d, East %d, West %d, South %d, SouthEast %d, SouthWest %d\n",BinIndex, North,NorthEast,NorthWest,East, West,South, SouthEast,SouthWest  );
 
             // Note: Left = West 
             // Right = East 
 
             /// NOW! Take all the particles in each of the bins and apply forces across all 9 bins.
-            // We are always going to apply forces within a bin we are intrested in
+            // We are always going to apply forces within a bin we are in
             //BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
+
 
             // we are not at an edge or a corner. -- Most common case
             if( (Left | Right | Top | Bottom) == false)
             {
 
-                //printf("ALL %d ", BinIndex );
+                //printf("ALL %d \n", BinIndex );
                 //NumofPeerBins = 8;
                 //N NE NW E W S SE SW
                 //printf("Test1 %d ", BinIndex);
@@ -189,6 +218,7 @@ int main( int argc, char **argv )
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                 //printf("Test8");
                 BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                //printVector(BinMembers); 
                 //printf("Testlast");
             }
             //printf("After");
@@ -198,27 +228,30 @@ int main( int argc, char **argv )
                 // most common case for the top row -- Not in a corner. 
                 if( (Left| Right) == false)
                 {
-                    //printf("Top Row %d ", BinIndex );
+                    //printf("Top Row %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                    //printVector(BinMembers); 
                 }
                 else if( (not Left) & Right) // Yes this would be called a corner case!!!
                 {
-                    //printf("Top Row Right %d ", BinIndex );
+                    //printf("Top Row Right %d \n", BinIndex );
                     // Right == East
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                    //printVector(BinMembers); 
                 }
                 else // left corner 
                 {
-                    //printf("Top Row Left %d ", BinIndex );
+                    //printf("Top Row Left %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                    //printVector(BinMembers); 
                 }
 
             }
@@ -227,20 +260,22 @@ int main( int argc, char **argv )
                 // most common case for the top row -- Not in a corner. 
                 if((Left | Right) == false)
                 {
-                    //printf("Bottom Row %d ", BinIndex );
+                    //printf("Bottom Row %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                    //printVector(BinMembers); 
                 }
                 else if( (not Left) & Right) // Yes this would be called a corner case!!!
                 {
                     // Right == East
-                    //printf("Bottom Row Right %d ", BinIndex );
+                    //printf("Bottom Row Right %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                    //printVector(BinMembers); 
                 }
                 else // left corner 
                 {
@@ -248,93 +283,83 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                    //printVector(BinMembers); 
 
                 }
 
             }
             else if(Left)  // not in a corner on the left side
             {
-                //printf("Left %d ", BinIndex );
+                //printf("Left %d \n", BinIndex );
                 BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                 BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                 BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                 BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                //printVector(BinMembers); 
             }
             else // must be the right side 
             {
-                //printf("Right %d ", BinIndex );
+                //printf("Right %d \n", BinIndex );
                 BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
                 BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                 BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                 BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                //printVector(BinMembers); 
+            }
+
+            for(int Inside_Bin = 0;Inside_Bin < Bins[BinIndex].size(); Inside_Bin++ )
+            {
+                
+                int Index = Bins[BinIndex][Inside_Bin];
+                // particles[Index].ax = particles[Index].ay = 0;
+
+                for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
+                {
+                    apply_force( particles[Index], particles[Inside_BinJ],&dmin,&davg,&navg);
+                    //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
+                }
+
             }
 
 
-
-
+            //printf(" There will be %d x %d interactions\n",Bins[BinIndex].size(), BinMembers.size());
+            // force to neighbors 
             for(int calcForceindexI = 0; calcForceindexI < Bins[BinIndex].size(); calcForceindexI++ )
             {
                 // apply forces 
-                int ParticleThisBin = Bins[BinIndex][calcForceindexI];
 
+                int ParticleThisBin = Bins[BinIndex][calcForceindexI];
+                    // once the force is applied awesome the accel is zero. 
+                // particlesSOA->ax[ParticleThisBin] = 0;
+                // particlesSOA->ay[ParticleThisBin] = 0;
 
                 for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
                 {
-                      printf("Interaction");
-                    apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
-
+                    //printf("Interaction!\n");
+                    //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
+                    apply_force( particles[ParticleThisBin], particles[calcForceindexJ],&dmin,&davg,&navg);
+                    //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
                  }
             }
 
             BinMembers.clear();
 
-        } // end of bin calcs
+            // printf("##########################################################################################\n");
+            // printf("##########################################################################################\n");
+            // printf("##########################################################################################\n");
+            // printf("\n");
 
-        //move particles
-        
+        //}// Bins[BinNum].size() > 0
+
+    } // end of bin calcs
+ 
+        //
+        //  move particles
+        //
         for( int i = 0; i < n; i++ ) 
-        {
-            //move( particles[i] );  
-            move_SOA( particlesSOA,i);
-        }
-
-
-        //
-        //  compute forces
-        //
-     //    for( int i = 0; i < n; i++ )
-     //    {
-     //        //particles[i].ax = particles[i].ay = 0;
-     //        //particlesSOA->ax[i] = 0;
-     //        //particlesSOA->ay[i] = 0;
-
-
-     //        for (int j = i+1; j < n; j++ )
-     //        {
-
-     //            loopcount++;
-     //        //particlesSOA->ax[j] = 0;
-     //        //particlesSOA->ay[j] = 0;
-
-     //            apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
-
-
-		   //    //apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-    	//      }
-     //         move_SOA( particlesSOA,i);
-    	// }
- 
- 
-        //
-
-        sprintf( outname, "out/fout-%05d.txt", step );
-
-        FILE *fout = fopen( outname, "w");
-        save_SOA( fout, n, particlesSOA);
-        fclose( fout );
-
+            move( particles[i] );       
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
@@ -346,18 +371,25 @@ int main( int argc, char **argv )
             nabsavg++;
           }
           if (dmin < absmin) absmin = dmin;
-		
+        
           //
           //  save if necessary
           //
           if( fsave && (step%SAVEFREQ) == 0 )
-            //save( fsave, n, particles );
-            save_SOA( fsave, n, particlesSOA );
+              save( fsave, n, particles );
         }
+
+
+        #ifdef VIZ
+            sprintf( outname, "out/fout-%05d.txt", step );
+
+            FILE *fout = fopen( outname, "w");
+            save( fout, n, particles);
+            fclose( fout );
+        #endif
+
+
     }
-
-    printf( "dmin = %f,davg = %f,navg = %f, loops = %d, applyforcescount = %d \n", dmin, davg, navg, loopcount, count );
-
     simulation_time = read_timer( ) - simulation_time;
     
     printf( "n = %d, simulation time = %g seconds", n, simulation_time);
@@ -389,18 +421,7 @@ int main( int argc, char **argv )
     //
     if( fsum )
         fclose( fsum );    
-    //free( particles );
-    
-    
-    free(particlesSOA->x);
-    free(particlesSOA->y);
-    free(particlesSOA->vx);
-    free(particlesSOA->vy);
-    free(particlesSOA->ax);
-    free(particlesSOA->ay);
-
-    free(particlesSOA);
-
+    free( particles );
     if( fsave )
         fclose( fsave );
     
