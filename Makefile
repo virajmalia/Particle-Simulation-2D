@@ -3,12 +3,12 @@
 #
 # Intel Compilers are loaded by default; for other compilers please check the module list
 #
-#CC = icpc
-CC = g++
+CC = icpc
+#CC = g++
 MPCC = mpicxx -cxx=icpc
 OPENMP = -qopenmp
-#CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops -march=core-avx2 -vec
-CFLAGS = -g -O3
+CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops -march=core-avx2 -vec
+#CFLAGS = -g -O3
 LIBS =
 
 
