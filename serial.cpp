@@ -4,6 +4,7 @@
 #include <math.h>
 #include "common.h"
 #include <vector>
+#include <set>
 
 // this is for the viz script
 #define VIZ
@@ -98,14 +99,14 @@ int main( int argc, char **argv )
 
         // re populate bins after the move update.
 
-        std::vector<int> BinsWithParticles;
+        std::set<int> BinsWithParticles;
 
         for(int particle = 0; particle < n; ++particle)
         {
             // CHECKED///////////////////////
               double binsize = getBinSize();
               //printf("Test4\n");
-        //     // get the bin index
+              // get the bin index
 
 
                int BinX = (int)(particles[particle].x/binsize);
@@ -120,7 +121,7 @@ int main( int argc, char **argv )
                Bins[BinNum].push_back(particle);
 
                // store the bin which contain a particle. We will ignore the empty ones
-               BinsWithParticles.push_back(BinNum);
+               BinsWithParticles.insert(BinNum);
 
                // int BinX = (int)(particlesSOA->x[particle]/binsize);
                // int BinY = (int)(particlesSOA->y[particle]/binsize);
@@ -151,13 +152,14 @@ int main( int argc, char **argv )
         // store the particle indices from each surrounding bin.
         std::vector<int> BinMembers;
 
-        // for each bin apply forces fromparticles within the cutoff distance.
+        // for each bin apply forces from particles within the cutoff distance.
         //for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
-        for(int Index = 0; Index < BinsWithParticles.size(); Index++ )
+        std::set<int>::iterator it;
+        for( it = BinsWithParticles.begin(); it != BinsWithParticles.end(); it++ )
         {
 
             // this is a vector of the bins with particles. We don't care about empty bins.
-            int BinIndex = BinsWithParticles[Index];
+            int BinIndex = *it;
 
          // if(Bins[BinIndex].size() > 0)
          // {
@@ -226,7 +228,7 @@ int main( int argc, char **argv )
             else if( Top )
             {
                 // most common case for the top row -- Not in a corner.
-                if( (Left| Right) == false)
+                if( (Left | Right) == false)
                 {
                     //printf("Top Row %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
@@ -236,7 +238,7 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
                     //printVector(BinMembers);
                 }
-                else if( (not Left) & Right) // Yes this would be called a corner case!!!
+                else if( (!Left) & Right) // Yes this would be called a corner case!!!
                 {
                     //printf("Top Row Right %d \n", BinIndex );
                     // Right == East
@@ -268,7 +270,7 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     //printVector(BinMembers);
                 }
-                else if( (not Left) & Right) // Yes this would be called a corner case!!!
+                else if( (!Left) & Right) // Yes this would be called a corner case!!!
                 {
                     // Right == East
                     //printf("Bottom Row Right %d \n", BinIndex );
@@ -284,7 +286,6 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     //printVector(BinMembers);
-
                 }
 
             }
@@ -311,7 +312,6 @@ int main( int argc, char **argv )
 
             for(int Inside_Bin = 0;Inside_Bin < Bins[BinIndex].size(); Inside_Bin++ )
             {
-
                 int Index = Bins[BinIndex][Inside_Bin];
                 // particles[Index].ax = particles[Index].ay = 0;
 
@@ -322,7 +322,6 @@ int main( int argc, char **argv )
                 }
 
             }
-
 
             //printf(" There will be %d x %d interactions\n",Bins[BinIndex].size(), BinMembers.size());
             // force to neighbors

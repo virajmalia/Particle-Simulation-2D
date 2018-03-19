@@ -12,35 +12,6 @@
 
 double size;
 
-//
-//  tuned constants        //
-        //  compute forces
-        //
-     //    for( int i = 0; i < n; i++ )
-     //    {
-     //        //particles[i].ax = particles[i].ay = 0;
-     //        //particlesSOA->ax[i] = 0;
-     //        //particlesSOA->ay[i] = 0;
-
-
-     //        for (int j = i+1; j < n; j++ )
-     //        {
-
-     //            loopcount++;
-     //        //particlesSOA->ax[j] = 0;
-     //        //particlesSOA->ay[j] = 0;
-
-     //            apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
-
-
-		   //    //apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-    	//      }
-     //         move_SOA( particlesSOA,i);
-    	// }
-
-
-        //
-//
 #define density 0.0005
 #define mass    0.01
 #define cutoff  0.01
@@ -64,7 +35,7 @@ double read_timer( )
         gettimeofday( &start, NULL );
         initialized = true;
     }
-    gettimeofday( &end, NULL );
+    gettimeofday( &end, NULL );//
     return (end.tv_sec - start.tv_sec) + 1.0e-6 * (end.tv_usec - start.tv_usec);
 }
 
@@ -79,7 +50,7 @@ void set_size( int n )
 int getbinNumber()
 {
     // need to round up for partial bins
-    return (int)ceil( size/cutoff);
+    return (int)ceil( size/cutoff );
 }
 
 double getSize()
@@ -299,10 +270,10 @@ void move_SOA( particle_SOA_t &p,int I)
     //  slightly simplified Velocity Verlet integration
     //  conserves energy better than explicit Euler method
     //
-    p->vx[I] += p->ax[I] * dt;
-    p->vy[I] += p->ay[I] * dt;
-    p->x[I]  += p->vx[I] * dt;
-    p->y[I]  += p->vy[I] * dt;
+    p.vx[I] += p.ax[I] * dt;
+    p.vy[I] += p.ay[I] * dt;
+    p.x[I]  += p.vx[I] * dt;
+    p.y[I]  += p.vy[I] * dt;
 
 
 
