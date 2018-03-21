@@ -249,6 +249,10 @@ void move( particle_t &p )
     p.x  += p.vx * dt;
     p.y  += p.vy * dt;
 
+    // once the force is applied awesome the accel is zero.
+    p.ax = 0;
+    p.ay = 0;
+
     //
     //  bounce from walls
     //

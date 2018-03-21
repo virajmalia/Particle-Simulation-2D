@@ -9,6 +9,10 @@
 // this is for the viz script
 #define VIZ
 
+#ifdef VIZ
+  #include <sys/stat.h>
+#endif
+
 void printVector(std::vector<int> A)
 {
     printf("Vector: ");
@@ -29,6 +33,8 @@ int main( int argc, char **argv )
 
     #ifdef VIZ
         char *outname = (char*) malloc(32* sizeof(char));
+        const char* dirName = "out";
+        mkdir(dirName, 0777);
     #endif
 
     if( find_option( argc, argv, "-h" ) >= 0 )
@@ -73,13 +79,13 @@ int main( int argc, char **argv )
     // printf("Num of bins %d \n",NumofBins );
 
     /// Make the vector of vectors. The bins are vectors
-    std::vector<std::vector<int> > Bins(NumofBins, std::vector<int>(0));
+    std::vector< std::vector<int> > Bins(NumofBins, std::vector<int>(0));
 
     //
     //  simulate a number of time steps
     //
 
-    printf("Num of bins: %d size is: %f BinSize: %f \n", getbinNumber(), getSize(), getBinSize());
+    printf("Num of bins each side: %d size is: %f BinSize: %f \n", getbinNumber(), getSize(), getBinSize());
 
     double simulation_time = read_timer( );
 
@@ -101,7 +107,7 @@ int main( int argc, char **argv )
 
         std::set<int> BinsWithParticles;
 
-        for(int particle = 0; particle < n; ++particle)
+        for(int particleIndex = 0; particleIndex < n; ++particleIndex)
         {
             // CHECKED///////////////////////
               double binsize = getBinSize();
@@ -109,8 +115,8 @@ int main( int argc, char **argv )
               // get the bin index
 
 
-               int BinX = (int)(particles[particle].x/binsize);
-               int BinY = (int)(particles[particle].y/binsize);
+               int BinX = (int)(particles[particleIndex].x/binsize);
+               int BinY = (int)(particles[particleIndex].y/binsize);
 
                // int BinX = (int)(particlesSOA->x[particle]/binsize);
                // int BinY = (int)(particlesSOA->y[particle]/binsize);
@@ -118,7 +124,7 @@ int main( int argc, char **argv )
                //printf("Adding particle\n");
                int BinNum = BinX + NumofBinsEachSide*BinY;
                //printf("Particle added to Bin %d", BinNum);
-               Bins[BinNum].push_back(particle);
+               Bins[BinNum].push_back(particleIndex);
 
                // store the bin which contain a particle. We will ignore the empty ones
                BinsWithParticles.insert(BinNum);
@@ -126,7 +132,7 @@ int main( int argc, char **argv )
                // int BinX = (int)(particlesSOA->x[particle]/binsize);
                // int BinY = (int)(particlesSOA->y[particle]/binsize);
 
-               particles[particle].ax = particles[particle].ay = 0;
+               //particles[particleIndex].ax = particles[particleIndex].ay = 0;
 
                //particlesSOA->ax[particle] = 0;
                //particlesSOA->ay[particle] = 0;
@@ -200,7 +206,7 @@ int main( int argc, char **argv )
             // we are not at an edge or a corner. -- Most common case
             if( (Left | Right | Top | Bottom) == false)
             {
-
+                ///////////////// CHECKED
                 //printf("ALL %d \n", BinIndex );
                 //NumofPeerBins = 8;
                 //N NE NW E W S SE SW
@@ -238,7 +244,7 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
                     //printVector(BinMembers);
                 }
-                else if( (!Left) & Right) // Yes this would be called a corner case!!!
+                else if( (!Left) && Right ) // Yes this would be called a corner case!!!
                 {
                     //printf("Top Row Right %d \n", BinIndex );
                     // Right == East
@@ -247,7 +253,7 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                     //printVector(BinMembers);
                 }
-                else // left corner
+                else if ( Left && (!Right) )// left corner
                 {
                     //printf("Top Row Left %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
@@ -270,7 +276,7 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     //printVector(BinMembers);
                 }
-                else if( (!Left) & Right) // Yes this would be called a corner case!!!
+                else if( (!Left) && Right ) // Yes this would be called a corner case!!!
                 {
                     // Right == East
                     //printf("Bottom Row Right %d \n", BinIndex );
@@ -279,7 +285,7 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     //printVector(BinMembers);
                 }
-                else // left corner
+                else if( Left && (!Right) )// left corner
                 {
                     //printf("Bottom Row Left %d ", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
@@ -299,7 +305,7 @@ int main( int argc, char **argv )
                 BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
                 //printVector(BinMembers);
             }
-            else // must be the right side
+            else if(Right) // must be the right side
             {
                 //printf("Right %d \n", BinIndex );
                 BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
@@ -309,15 +315,19 @@ int main( int argc, char **argv )
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                 //printVector(BinMembers);
             }
+            else
+            {
+              printf("Getting another bin case\n");
+            }
 
-            for(int Inside_Bin = 0;Inside_Bin < Bins[BinIndex].size(); Inside_Bin++ )
+            for(int Inside_Bin = 0; Inside_Bin < Bins[BinIndex].size(); Inside_Bin++)
             {
                 int Index = Bins[BinIndex][Inside_Bin];
                 // particles[Index].ax = particles[Index].ay = 0;
 
                 for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
                 {
-                    apply_force( particles[Index], particles[Inside_BinJ],&dmin,&davg,&navg);
+                    apply_force( particles[Index], particles[Inside_BinJ], &dmin, &davg, &navg);
                     //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
                 }
 
@@ -329,7 +339,7 @@ int main( int argc, char **argv )
             {
                 // apply forces
 
-                int ParticleThisBin = Bins[BinIndex][calcForceindexI];
+                int ParticleThisBin = Bins[BinIndex][calcForceindexI];    ////// PERFECT
                     // once the force is applied awesome the accel is zero.
                 // particlesSOA->ax[ParticleThisBin] = 0;
                 // particlesSOA->ay[ParticleThisBin] = 0;
@@ -338,7 +348,7 @@ int main( int argc, char **argv )
                 {
                     //printf("Interaction!\n");
                     //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
-                    apply_force( particles[ParticleThisBin], particles[calcForceindexJ],&dmin,&davg,&navg);
+                    apply_force( particles[ParticleThisBin], particles[ BinMembers[calcForceindexJ] ], &dmin, &davg, &navg);
                     //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
                  }
             }
@@ -353,6 +363,8 @@ int main( int argc, char **argv )
         //}// Bins[BinNum].size() > 0
 
     } // end of bin calcs
+
+    BinsWithParticles.clear();
 
         //
         //  move particles
