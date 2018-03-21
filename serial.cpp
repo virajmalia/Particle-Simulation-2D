@@ -40,9 +40,6 @@ int main( int argc, char **argv )
 
     set_size( n );
 
-    // particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
-    // init_particles( n, particles );
-
     particle_SOA_t *particlesSOA =(particle_SOA_t*)malloc( sizeof(particle_SOA_t));
     particlesSOA->x = (double*)malloc( n* sizeof(double));
     particlesSOA->y = (double*)malloc( n* sizeof(double));
@@ -52,11 +49,6 @@ int main( int argc, char **argv )
     particlesSOA->ay = (double*)malloc( n* sizeof(double));
 
     init_particles_SOA( n, particlesSOA );
-
-	// Custom initializations to reduce arithmetic in apply_force()
-	//double register mass_inv = 1/mass;
-	//double register cutoff_sq = cutoff * cutoff;
-	//double register min_r_sq = min_r * min_r;
 
     //
     //  simulate a number of time steps
@@ -77,34 +69,13 @@ int main( int argc, char **argv )
         //
         for( int i = 0; i < n; i++ )
         {
-            //particles[i].ax = particles[i].ay = 0;
-            //particlesSOA->ax[i] = 0;
-            //particlesSOA->ay[i] = 0;
-
-
             for (int j = i+1; j < n; j++ )
             {
-
                 loopcount++;
-            //particlesSOA->ax[j] = 0;
-            //particlesSOA->ay[j] = 0;
-
                 apply_force_SOA( particlesSOA,i, j, &dmin, &davg, &navg);
-
-
-		      //apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-    	     }
-             move_SOA( particlesSOA,i);
+    	    }
+            move_SOA( particlesSOA,i);
     	}
-
-        //
-        //  move particles
-        //
-        // for( int i = 0; i < n; i++ )
-        // {
-        //     //move( particles[i] );
-        //     move_SOA( particlesSOA,i);
-        // }
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
@@ -126,7 +97,7 @@ int main( int argc, char **argv )
         }
     }
 
-    printf( "dmin = %f,davg = %f,navg = %f, loops = %d, applyforcescount = %d \n", dmin, davg, navg, loopcount, count );
+    //printf( "dmin = %f,davg = %f,navg = %f, loops = %d, applyforcescount = %d \n", dmin, davg, navg, loopcount, count );
 
     simulation_time = read_timer( ) - simulation_time;
 
@@ -159,8 +130,6 @@ int main( int argc, char **argv )
     //
     if( fsum )
         fclose( fsum );
-    //free( particles );
-
 
     free(particlesSOA->x);
     free(particlesSOA->y);
