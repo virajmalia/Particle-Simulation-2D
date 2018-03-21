@@ -49,6 +49,7 @@ void set_size( int n );
 int getbinNumber();
 double getSize();
 double getBinSize();
+int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
 void init_particles( int n, particle_t *p );
 void init_particles_SOA( int n, particle_SOA_t *p );
 void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg);

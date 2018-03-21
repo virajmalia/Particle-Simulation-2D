@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -A cc3uv3p # 2017 XSEDE Applications of Parallel Computing Course Allocation
+#SBATCH -J auto-particle-mpi
+#SBATCH -o auto-particle-mpi.stdout
+#SBATCH -n 16         
+#SBATCH -p RM
+#SBATCH -t 00:10:00     
+#SBATCH -N 1  
+
+rm mpi_sum.txt
+./serial -n 500 -no -s mpi_sum.txt
+mpirun -n 1 ./mpi -n 500 -no -s mpi_sum.txt
+mpirun -n 2 ./mpi -n 500 -no -s mpi_sum.txt
+mpirun -n 4 ./mpi -n 500 -no -s mpi_sum.txt
+mpirun -n 8 ./mpi -n 500 -no -s mpi_sum.txt
+mpirun -n 16 ./mpi -n 500 -no -s mpi_sum.txt
+mpirun -n 2 ./mpi -n 1000 -no -s mpi_sum.txt
+mpirun -n 4 ./mpi -n 2000 -no -s mpi_sum.txt
+mpirun -n 8 ./mpi -n 4000 -no -s mpi_sum.txt
+mpirun -n 16 ./mpi -n 8000 -no -s mpi_sum.txt
+./autograder -v mpi -s mpi_sum.txt

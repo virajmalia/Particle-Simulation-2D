@@ -7,13 +7,13 @@
 //
 //  benchmarking program
 //
-int main( int argc, char **argv )
-{    
+int main(int argc, char **argv)
+{
     int navg, nabsavg=0;
     double dmin, absmin=1.0,davg,absavg=0.0;
     double rdavg,rdmin;
     int rnavg; 
- 
+
     //
     //  process command line parameters
     //
@@ -46,13 +46,17 @@ int main( int argc, char **argv )
     FILE *fsave = savename && rank == 0 ? fopen( savename, "w" ) : NULL;
     FILE *fsum = sumname && rank == 0 ? fopen ( sumname, "a" ) : NULL;
 
-
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     
     MPI_Datatype PARTICLE;
     MPI_Type_contiguous( 6, MPI_DOUBLE, &PARTICLE );
     MPI_Type_commit( &PARTICLE );
-    
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// probably have to set stuff up in here 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     //
     //  set up the data partitioning across processors
     //
@@ -74,96 +78,126 @@ int main( int argc, char **argv )
     //
     //  initialize and distribute the particles (that's fine to leave it unoptimized)
     //
+
+    //This wiiill probably stay the same. 
     set_size( n );
-    if( rank == 0 )
-        init_particles( n, particles );
-    MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
-    
+    if (rank == 0)
+    { // if we are the master node. 
+        init_iparticles(n, size, particles);
+    }
+
+    //MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ // probaly going to have to change this as well 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     //
     //  simulate a number of time steps
     //
-    double simulation_time = read_timer( );
-    for( int step = 0; step < NSTEPS; step++ )
+    double simulation_time = read_timer();
+    for (int step = 0; step < NSTEPS; step++)
     {
         navg = 0;
         dmin = 1.0;
         davg = 0.0;
-        // 
-        //  collect all global data locally (not good idea to do)
-        //
-        MPI_Allgatherv( local, nlocal, PARTICLE, particles, partition_sizes, partition_offsets, PARTICLE, MPI_COMM_WORLD );
+
+
+        //  // 
+        // //  collect all global data locally (not good idea to do)
+        // //
+        // MPI_Allgatherv( local, nlocal, PARTICLE, particles, partition_sizes, partition_offsets, PARTICLE, MPI_COMM_WORLD );
         
-        //
-        //  save current step if necessary (slightly different semantics than in other codes)
-        //
-        if( find_option( argc, argv, "-no" ) == -1 )
-          if( fsave && (step%SAVEFREQ) == 0 )
-            save( fsave, n, particles );
+        // //
+        // //  save current step if necessary (slightly different semantics than in other codes)
+        // //
+        // if( find_option( argc, argv, "-no" ) == -1 )
+        //   if( fsave && (step%SAVEFREQ) == 0 )
+        //     save( fsave, n, particles );
         
-        //
-        //  compute all forces
-        //
-        for( int i = 0; i < nlocal; i++ )
-        {
-            local[i].ax = local[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-                apply_force( local[i], particles[j], &dmin, &davg, &navg );
-        }
-     
+        // //
+        // //  compute all forces
+        // //
+        // for( int i = 0; i < nlocal; i++ )
+        // {
+        //     local[i].ax = local[i].ay = 0;
+        //     for (int j = 0; j < n; j++ )
+        //         apply_force( local[i], particles[j], &dmin, &davg, &navg );
+        // }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// new apply forces function that works across processors. 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         if( find_option( argc, argv, "-no" ) == -1 )
-        {
+        { //This should stay the same 
           
           MPI_Reduce(&davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
           MPI_Reduce(&navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
           MPI_Reduce(&dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
 
- 
-          if (rank == 0){
+          if (rank == 0)
+          {
             //
             // Computing statistical data
             //
-            if (rnavg) {
+            if (rnavg) 
+            {
               absavg +=  rdavg/rnavg;
               nabsavg++;
             }
-            if (rdmin < absmin) absmin = rdmin;
+            if (rdmin < absmin)
+            { 
+                absmin = rdmin;
+            }
           }
         }
 
-        //
-        //  move particles
-        //
-        for( int i = 0; i < nlocal; i++ )
-            move( local[i] );
-    }
-    simulation_time = read_timer( ) - simulation_time;
-  
-    if (rank == 0) {  
-      printf( "n = %d, simulation time = %g seconds", n, simulation_time);
+    //             //
+    //     //  move particles
+    //     //
+    //     for( int i = 0; i < nlocal; i++ )
+    //         move( local[i] );
+    // }
 
-      if( find_option( argc, argv, "-no" ) == -1 )
-      {
-        if (nabsavg) absavg /= nabsavg;
-      // 
-      //  -the minimum distance absmin between 2 particles during the run of the simulation
-      //  -A Correct simulation will have particles stay at greater than 0.4 (of cutoff) with typical values between .7-.8
-      //  -A simulation were particles don't interact correctly will be less than 0.4 (of cutoff) with typical values between .01-.05
-      //
-      //  -The average distance absavg is ~.95 when most particles are interacting correctly and ~.66 when no particles are interacting
-      //
-      printf( ", absmin = %lf, absavg = %lf", absmin, absavg);
-      if (absmin < 0.4) printf ("\nThe minimum distance is below 0.4 meaning that some particle is not interacting");
-      if (absavg < 0.8) printf ("\nThe average distance is below 0.8 meaning that most particles are not interacting");
-      }
-      printf("\n");     
-        
-      //  
-      // Printing summary data
-      //  
-      if( fsum)
-        fprintf(fsum,"%d %d %g\n",n,n_proc,simulation_time);
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        ////new move function that handles cross processor particles 
+}
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    simulation_time = read_timer() - simulation_time;
+
+    if (rank == 0) 
+    {
+        printf("n = %d, simulation time = %g seconds", n, simulation_time);
+
+        if (find_option(argc, argv, "-no") == -1) 
+        {
+            if (nabsavg) 
+            {
+                absavg /= nabsavg;
+            }
+            //
+            //  -the minimum distance absmin between 2 particles during the run of the simulation
+            //  -A Correct simulation will have particles stay at greater than 0.4 (of cutoff) with typical values between .7-.8
+            //  -A simulation were particles don't interact correctly will be less than 0.4 (of cutoff) with typical values between .01-.05
+            //
+            //  -The average distance absavg is ~.95 when most particles are interacting correctly and ~.66 when no particles are interacting
+            //
+            printf(", absmin = %lf, absavg = %lf", absmin, absavg);
+            if (absmin < 0.4) printf("\nThe minimum distance is below 0.4 meaning that some particle is not interacting");
+            if (absavg < 0.8) printf("\nThe average distance is below 0.8 meaning that most particles are not interacting");
+        }
+        printf("\n");
+
+        //
+        // Printing summary data
+        //
+        if (fsum)
+        {
+            fprintf(fsum,"%d %d %g\n",n,n_proc,simulation_time);
+        }
     }
-  
+
     //
     //  release resources
     //
