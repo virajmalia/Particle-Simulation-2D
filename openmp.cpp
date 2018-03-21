@@ -7,7 +7,7 @@
 #include <set>
 
 // this is for the viz script 
-#define VIZ
+//#define VIZ
 
 void printVector(std::vector<int> A)
 {

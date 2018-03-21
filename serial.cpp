@@ -7,7 +7,7 @@
 #include <set>
 
 // this is for the viz script
-#define VIZ
+//#define VIZ
 
 #ifdef VIZ
   #include <sys/stat.h>
