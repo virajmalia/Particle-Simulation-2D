@@ -327,7 +327,9 @@ int main( int argc, char **argv )
 
                 for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
                 {
-                    apply_force( particles[Index], particles[Inside_BinJ], &dmin, &davg, &navg);
+                    int Index2 = Bins[BinIndex][Inside_BinJ];
+                    
+                    apply_force( particles[Index], particles[Index2], &dmin, &davg, &navg);
                     //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
                 }
 

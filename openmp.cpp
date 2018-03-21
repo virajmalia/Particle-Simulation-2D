@@ -205,7 +205,7 @@ int main( int argc, char **argv )
             // we are not at an edge or a corner. -- Most common case
             if( (Left | Right | Top | Bottom) == false)
             {
-
+                ///////////////// CHECKED
                 //printf("ALL %d \n", BinIndex );
                 //NumofPeerBins = 8;
                 //N NE NW E W S SE SW
@@ -225,15 +225,15 @@ int main( int argc, char **argv )
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                 //printf("Test8");
                 BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
-                //printVector(BinMembers); 
+                //printVector(BinMembers);
                 //printf("Testlast");
             }
             //printf("After");
-            // Top Row 
+            // Top Row
             else if( Top )
             {
-                // most common case for the top row -- Not in a corner. 
-                if( (Left| Right) == false)
+                // most common case for the top row -- Not in a corner.
+                if( (Left | Right) == false)
                 {
                     //printf("Top Row %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
@@ -241,30 +241,30 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
-                    //printVector(BinMembers); 
+                    //printVector(BinMembers);
                 }
-                else if( (not Left) & Right) // Yes this would be called a corner case!!!
+                else if( (!Left) && Right ) // Yes this would be called a corner case!!!
                 {
                     //printf("Top Row Right %d \n", BinIndex );
                     // Right == East
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-                    //printVector(BinMembers); 
+                    //printVector(BinMembers);
                 }
-                else // left corner 
+                else if ( Left && (!Right) )// left corner
                 {
                     //printf("Top Row Left %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                     BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                     BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
-                    //printVector(BinMembers); 
+                    //printVector(BinMembers);
                 }
 
             }
             else if( Bottom )
             {
-                // most common case for the top row -- Not in a corner. 
+                // most common case for the top row -- Not in a corner.
                 if((Left | Right) == false)
                 {
                     //printf("Bottom Row %d \n", BinIndex );
@@ -273,25 +273,24 @@ int main( int argc, char **argv )
                     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-                    //printVector(BinMembers); 
+                    //printVector(BinMembers);
                 }
-                else if( (not Left) & Right) // Yes this would be called a corner case!!!
+                else if( (!Left) && Right ) // Yes this would be called a corner case!!!
                 {
                     // Right == East
                     //printf("Bottom Row Right %d \n", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-                    //printVector(BinMembers); 
+                    //printVector(BinMembers);
                 }
-                else // left corner 
+                else if( Left && (!Right) )// left corner
                 {
                     //printf("Bottom Row Left %d ", BinIndex );
                     BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
                     BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
                     BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-                    //printVector(BinMembers); 
-
+                    //printVector(BinMembers);
                 }
 
             }
@@ -303,9 +302,9 @@ int main( int argc, char **argv )
                 BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
                 BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
-                //printVector(BinMembers); 
+                //printVector(BinMembers);
             }
-            else // must be the right side 
+            else if(Right) // must be the right side
             {
                 //printf("Right %d \n", BinIndex );
                 BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
@@ -313,32 +312,36 @@ int main( int argc, char **argv )
                 BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
                 BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
                 BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-                //printVector(BinMembers); 
+                //printVector(BinMembers);
+            }
+            else
+            {
+              printf("Getting another bin case\n");
             }
 
-            for(int Inside_Bin = 0;Inside_Bin < Bins[BinIndex].size(); Inside_Bin++ )
+           for(int Inside_Bin = 0; Inside_Bin < Bins[BinIndex].size(); Inside_Bin++)
             {
-                
                 int Index = Bins[BinIndex][Inside_Bin];
                 // particles[Index].ax = particles[Index].ay = 0;
 
                 for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
                 {
-                    apply_force( particles[Index], particles[Inside_BinJ],&dmin,&davg,&navg);
+                    int Index2 = Bins[BinIndex][Inside_BinJ];
+                    
+                    apply_force( particles[Index], particles[Index2], &dmin, &davg, &navg);
                     //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
                 }
 
             }
 
-
             //printf(" There will be %d x %d interactions\n",Bins[BinIndex].size(), BinMembers.size());
-            // force to neighbors 
+            // force to neighbors
             for(int calcForceindexI = 0; calcForceindexI < Bins[BinIndex].size(); calcForceindexI++ )
             {
-                // apply forces 
+                // apply forces
 
-                int ParticleThisBin = Bins[BinIndex][calcForceindexI];
-                    // once the force is applied awesome the accel is zero. 
+                int ParticleThisBin = Bins[BinIndex][calcForceindexI];    ////// PERFECT
+                    // once the force is applied awesome the accel is zero.
                 // particlesSOA->ax[ParticleThisBin] = 0;
                 // particlesSOA->ay[ParticleThisBin] = 0;
 
@@ -346,7 +349,7 @@ int main( int argc, char **argv )
                 {
                     //printf("Interaction!\n");
                     //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
-                    apply_force( particles[ParticleThisBin], particles[calcForceindexJ],&dmin,&davg,&navg);
+                    apply_force( particles[ParticleThisBin], particles[ BinMembers[calcForceindexJ] ], &dmin, &davg, &navg);
                     //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
                  }
             }
