@@ -4,6 +4,7 @@
 #include <math.h>
 #include "common.h"
 #include <vector>
+#include <set>
 
 // this is for the viz script 
 #define VIZ
@@ -73,6 +74,7 @@ int main( int argc, char **argv )
 
     /// Make the vector of vectors. The bins are vectors
     std::vector<std::vector<int> > Bins(NumofBins, std::vector<int>(0));
+
     
     //
     //  simulate a number of time steps
@@ -99,7 +101,8 @@ int main( int argc, char **argv )
 
         // re populate bins after the move update. 
 
-        std::vector<int> BinsWithParticles;
+        
+        std::set<int> BinsWithParticlesSet;
 
 
         #pragma omp for
@@ -123,7 +126,7 @@ int main( int argc, char **argv )
                Bins[BinNum].push_back(particle);
 
                // store the bin which contain a particle. We will ignore the empty ones
-               BinsWithParticles.push_back(BinNum);
+               BinsWithParticlesSet.insert(BinNum);
 
                // int BinX = (int)(particlesSOA->x[particle]/binsize);
                // int BinY = (int)(particlesSOA->y[particle]/binsize);
@@ -139,17 +142,8 @@ int main( int argc, char **argv )
         //     //addParticleToBin(n,BinX,BinY);
         }
 
-
-        //
-        //  compute forces
-        //
-    //     for( int i = 0; i < n; i++ )
-    //     {
-    //         particles[i].ax = particles[i].ay = 0;
-    //         for (int j = 0; j < n; j++ )
-                // apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-    //     }
-
+        // stupid issue with openmp and sets
+        std::vector<int> BinsWithParticles(BinsWithParticlesSet.begin(), BinsWithParticlesSet.end());
 
         // store the particle indexs from each surrounding bin.
         std::vector<int> BinMembers; 
@@ -157,12 +151,20 @@ int main( int argc, char **argv )
         // for each bin apply forces fromparticles within the cutoff distance.
         //for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
 
+        
+        //
+        
+        //
+        
+        //
+        
         #pragma omp for
         for(int Index = 0; Index < BinsWithParticles.size(); Index++ )
         {
 
             // this is a vector of the bins with particles. We don't care about empty bins. 
             int BinIndex = BinsWithParticles[Index];
+            //int BinIndex = *it;
 
          // if(Bins[BinIndex].size() > 0)
          // {
