@@ -24,8 +24,8 @@ pthreads: pthreads.o common.o
 	$(CC) -o $@ $(LIBS) -lpthread pthreads.o common.o
 openmp: openmp.o common.o
 	$(CC) -o $@ $(LIBS) $(OPENMP) openmp.o common.o
-mpi: mpi.o common.o
-	$(MPCC) -o $@ $(LIBS) $(MPILIBS) mpi.o common.o
+mpi: mpi.o common.o 
+	$(MPCC) -o $@ $(LIBS) $(MPILIBS) mpi.o common.o 
 
 autograder.o: autograder.cpp common.h
 	$(CC) -c $(CFLAGS) autograder.cpp
@@ -35,10 +35,12 @@ serial.o: serial.cpp common.h
 	$(CC) -c $(CFLAGS) serial.cpp
 pthreads.o: pthreads.cpp common.h
 	$(CC) -c $(CFLAGS) pthreads.cpp
-mpi.o: mpi.cpp common.h
+mpi.o: mpi.cpp common.h 
 	$(MPCC) -c $(CFLAGS) mpi.cpp
 common.o: common.cpp common.h
 	$(CC) -c $(CFLAGS) common.cpp
+# mpi_tools.o: mpi_tools.cpp mpi_tools.h
+# 	$(MPCC) -c $(CFLAGS) mpi_tools.cpp
 
 clean:
 	rm -rf *.o $(TARGETS) *.stdout *.txt *.optrpt out

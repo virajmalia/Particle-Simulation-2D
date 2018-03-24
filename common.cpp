@@ -63,9 +63,51 @@ double getBinSize()
     return cutoff;
 }
 
+int getRowsPerProc(int Bins, int NumberofProcessors )
+{
+    // need to convert to a float first otherwise the value will be rounded down. 
+    return ceil((float)Bins/NumberofProcessors);
+}
+
+// bins will not not move. Once set, their location is static 
+int MapBinToProc(int Bin, int NumberOfProcs)
+{ // untested this needs to be figured out
+    int Processor = 0; 
+    return Processor;
+
+}
+
+int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
+{
+    // this will give you which bin the particle must be locatd in 
+    double binsize = getBinSize();
+              //printf("Test4\n");
+              // get the bin index
+
+   int BinX = (int)(particle.x/binsize);
+   int BinY = (int)(particle.y/binsize);
+
+   // int BinX = (int)(particlesSOA->x[particle]/binsize);
+   // int BinY = (int)(particlesSOA->y[particle]/binsize);
+
+   //printf("Adding particle\n");
+   return  (BinX + NumofBinsEachSide*BinY);
+}
+
+int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors )
+{   // this will retun the processor to which a given particle belongs. 
+    int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
+    return MapBinToProc(BinNum,NumberofProcessors);
+}
+// int getProcessorForBin(int Bin)
+// {
+//     return 
+// }
+
 //
 //  Initialize the particle positions and velocities
-//
+
+
 void init_particles( int n, particle_t *p )
 {
     srand48( time( NULL ) );

@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include "common.h"
+#include <vector>
+//#include "mpi_tools.h"
+
+MPI_Datatype PARTICLE;
+void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank, particle_t * local ,int * nlocal);
 
 //
 //  benchmarking program
@@ -31,6 +36,9 @@ int main(int argc, char **argv)
     int n = read_int( argc, argv, "-n", 1000 );
     char *savename = read_string( argc, argv, "-o", NULL );
     char *sumname = read_string( argc, argv, "-s", NULL );
+
+    //This will probably stay the same. 
+    set_size( n );
     
     //
     //  set up MPI
@@ -47,8 +55,6 @@ int main(int argc, char **argv)
     FILE *fsum = sumname && rank == 0 ? fopen ( sumname, "a" ) : NULL;
 
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
-    
-    MPI_Datatype PARTICLE;
     MPI_Type_contiguous( 6, MPI_DOUBLE, &PARTICLE );
     MPI_Type_commit( &PARTICLE );
 
@@ -57,34 +63,42 @@ int main(int argc, char **argv)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    //
-    //  set up the data partitioning across processors
-    //
-    int particle_per_proc = (n + n_proc - 1) / n_proc;
-    int *partition_offsets = (int*) malloc( (n_proc+1) * sizeof(int) );
-    for( int i = 0; i < n_proc+1; i++ )
-        partition_offsets[i] = min( i * particle_per_proc, n );
+    // //
+    // //  set up the data partitioning across processors
+    // //
+    // int particle_per_proc = (n + n_proc - 1) / n_proc;
+    // int *partition_offsets = (int*) malloc( (n_proc+1) * sizeof(int) );
+    // for( int i = 0; i < n_proc+1; i++ )
+    //     partition_offsets[i] = min( i * particle_per_proc, n );
     
-    int *partition_sizes = (int*) malloc( n_proc * sizeof(int) );
-    for( int i = 0; i < n_proc; i++ )
-        partition_sizes[i] = partition_offsets[i+1] - partition_offsets[i];
-    
-    //
-    //  allocate storage for local partition
-    //
-    int nlocal = partition_sizes[rank];
-    particle_t *local = (particle_t*) malloc( nlocal * sizeof(particle_t) );
+    // int *partition_sizes = (int*) malloc( n_proc * sizeof(int) );
+    // for( int i = 0; i < n_proc; i++ )
+    //     partition_sizes[i] = partition_offsets[i+1] - partition_offsets[i];
     
     //
     //  initialize and distribute the particles (that's fine to leave it unoptimized)
     //
 
-    //This wiiill probably stay the same. 
-    set_size( n );
+
     if (rank == 0)
     { // if we are the master node. 
-        init_iparticles(n, size, particles);
+        init_particles(n, particles);
+
     }
+
+    int NumofBinsEachSide = getbinNumber();
+    int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
+    // allocate storage for local partition
+    //
+    int *nlocal;
+    particle_t *local; //  = (particle_t*) malloc( nlocal * sizeof(particle_t) );
+
+    /// Make the vector of vectors. The bins are vectors
+    std::vector< std::vector<int> > Bins(NumofBins, std::vector<int>(0));
+
+    // send the assign the particles to each procssor based on which bin they are located in. local particles will be populated from this array. 
+    ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank, local ,nlocal);
+
 
     //MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -203,8 +217,8 @@ int main(int argc, char **argv)
     //
     if ( fsum )
         fclose( fsum );
-    free( partition_offsets );
-    free( partition_sizes );
+    //free( partition_offsets );
+    //free( partition_sizes );
     free( local );
     free( particles );
     if( fsave )
@@ -214,3 +228,68 @@ int main(int argc, char **argv)
     
     return 0;
 }
+
+
+
+
+// would be much cleaner to use multiple returns in C++ 14 but I am not placing faith in compiler support. It's a very new feature
+void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank, particle_t * local ,int * nlocal)
+{ // send particles to the correct processor based on which bin the particle is in and what processor the bin belongs to. 
+
+
+    //int *partition_offsets = (int*) malloc( (n_proc+1) * sizeof(int) );
+    std::vector<int> partition_offsets(NumberofProcessors);
+    
+    //int *partition_sizes = (int*) malloc( NumberofProcessors * sizeof(int) );
+    
+    std::vector<int> partition_sizes(NumberofProcessors);
+
+    // temp storage for particles in correct order
+    nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
+    *nlocal = partition_sizes[rank];
+    local = (particle_t*) malloc( *nlocal * sizeof(particle_t) );
+
+
+    std::vector< std::vector<particle_t> > ParticlesPerProcecesor(NumberofProcessors,std::vector<particle_t>() );
+
+    if(rank == 0) // only the master node should do this 
+    {   //sort the particles based on the bin location 
+        //returns a proc number 
+        for(int particleIndex = 0; particleIndex < NumofParticles; particleIndex++)
+        {
+            int ProcNumber = MapParticleToProc(particles[particleIndex],NumofBinsEachSide,NumberofProcessors);
+            ParticlesPerProcecesor[ProcNumber].push_back(particles[particleIndex]); // add the the vector at each index
+
+        }
+
+    }
+
+    std::vector<particle_t>  particlesassignedtoproc;
+
+    // append all the particles to particlesassignedtoproc 0 to NumberofProcessors
+    int ProcNumCount = 0;
+    int runningoffset = 0;
+
+    for(auto ParticleVector : ParticlesPerProcecesor)
+    {
+        particlesassignedtoproc.insert(particlesassignedtoproc.end(),ParticleVector.begin(),ParticleVector.end());
+        partition_sizes[ProcNumCount] = ParticleVector.size();
+        partition_offsets[ProcNumCount] = runningoffset; 
+        runningoffset += ParticleVector.size();
+        ProcNumCount +=1; 
+    }
+
+    *nlocal = partition_sizes[rank];
+
+    local = (particle_t*) malloc( *nlocal * sizeof(particle_t) );
+
+    // scatter the particles to the processors. More scattered than the programmer's brain. 
+    MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes.data(), partition_offsets.data(), PARTICLE, local, *nlocal, PARTICLE, 0, MPI_COMM_WORLD );
+
+    // pharaoh, let my particles go!!!!
+    // free(partition_offsets);
+    // free(partition_sizes);
+    //free(particlesassignedtoproc);
+}
+
+
