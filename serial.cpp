@@ -6,6 +6,8 @@
 #include <vector>
 #include <set>
 
+#include "inline_func.h"
+
 // this is for the viz script
 //#define VIZ
 
@@ -142,18 +144,6 @@ int main( int argc, char **argv )
                //printf("There are %d particles in bin %d\n",Bins[BinNum].size(),BinNum );
         //     //addParticleToBin(n,BinX,BinY);
         }
-
-
-        //
-        //  compute forces
-        //
-    //     for( int i = 0; i < n; i++ )
-    //     {
-    //         particles[i].ax = particles[i].ay = 0;
-    //         for (int j = 0; j < n; j++ )
-                // apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-    //     }
-
 
         // store the particle indices from each surrounding bin.
         std::vector<int> BinMembers;
