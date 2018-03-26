@@ -90,15 +90,20 @@ int main(int argc, char **argv)
     int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
     // allocate storage for local partition
     //
-    int *nlocal;
+    int nlocal;
     particle_t *local; //  = (particle_t*) malloc( nlocal * sizeof(particle_t) );
 
     /// Make the vector of vectors. The bins are vectors
     std::vector< std::vector<int> > Bins(NumofBins, std::vector<int>(0));
 
     // send the assign the particles to each procssor based on which bin they are located in. local particles will be populated from this array. 
-    ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank, local ,nlocal);
+    ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank, local ,&nlocal);
 
+    // make a vector out of the array since we will be adding and removing elements. 
+    std::vector <particle_t> localParticleVector(local , local + nlocal);
+
+    // don't need local anymore!
+    free( local );
 
     //MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -219,8 +224,8 @@ int main(int argc, char **argv)
         fclose( fsum );
     //free( partition_offsets );
     //free( partition_sizes );
-    free( local );
-    free(nlocal);
+    //free( local );
+    //free(nlocal);
     free( particles );
     if( fsave )
         fclose( fsave );
@@ -229,6 +234,13 @@ int main(int argc, char **argv)
     
     return 0;
 }
+
+
+
+
+
+
+///////////////////////////////////////////////////////////// MPI FUNCTIONS ////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 // would be much cleaner to use multiple returns in C++ 14 but I am not placing faith in compiler support. It's a very new feature
@@ -273,7 +285,7 @@ void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, co
         ProcNumCount +=1; 
     }
 
-    nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
+    //nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
     *nlocal = partition_sizes[rank];
     local = (particle_t*) malloc( *nlocal * sizeof(particle_t) );
 
@@ -286,25 +298,80 @@ void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, co
     //free(particlesassignedtoproc);
 }
 
-
-void BoarderParticles()
+// spoky! These are need for the local caclulations but forces are not computed on them. 
+void GhostParticles(std::vector <particle_t> & localparticleVector,int rank)
 { //These are redundant particles that exists on other processors but, are needed for computing forces on the local processor. 
-    
+    // since we can't request the particle it make more sense for each processor to send them to it's peers. 
+    std::vector<int> BoarderRanks = getBoarderPeers(rank);
+    // Send border particles to neighbors
+
+    std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
+
+    for (int Peer = 0; Peer < BoarderRanks.size(); Peer++)
+    {
+            if(OutgoingParticles[Peer].empty() == false) 
+            {
+                MPI_Request request;
+                MPI_Ibsend(&OutgoingParticles[Peer][0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
+                MPI_Request_free(&request);
+            }
+            else // we need to send a message to unblock the recv on other processors. 
+            {
+                MPI_Request request;
+                MPI_Ibsend(0, 0, PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
+                MPI_Request_free(&request);
+            }
+
+        // reset the outgoing buffer. 
+        //OutgoingParticles[procNum].clear();
+    }
+
+    // same code as Move particles recv
+    //the largest number of particles we could possibly recieve is n. 
+    particle_t *GhostParticleRecvBuffer = (particle_t*) malloc( n * sizeof(particle_t) );
+
+    for(int ProcIdRecv = 0; ProcIdRecv < NumberofBoarderPeers; ProcIdRecv++)
+    {
+        // recieve boarder 
+        int RecvCount = 0;
+        MPI_Status status;
+        //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
+        MPI_Recv(GhostParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 0, MPI_COMM_WORLD, &status);
+        
+        // get the number of particles we have revieved 
+        MPI_Get_count(&status, PARTICLE, &RecvCount);
+
+        // for each recieved particle 
+        for(int newParticle = 0; newParticle < RecvCount; newParticle++)
+        {
+            // add to our local collection of particles 
+            localparticleVector.push_back(GhostParticleRecvBuffer[newParticle]);
+            //MapParticleToBin(MovedParticleRecvBuffer[i], NumofBinsEachSide)
+        }
+
+        // add total to the local count 
+        *nlocal += RecvCount;
+    }
+    // freee 
+    free(GhostParticleRecvBuffer);
 }
 
-void MoveParticles(particle_t *particles, int rank, int NumberofProcessors, const int NumofBinsEachSide)
+void MoveParticles(std::vector <particle_t> & localparticleVector, int rank, int NumberofProcessors, const int NumofBinsEachSide)
 {
     // moved particles 
+    // outgoing particles 
+    std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
+
     for( int i = 0; i < nlocal; i++ )
     {
-        move( local[i] );
+        move( localParticleVector[i] );
         //this is the global n=bin number
         int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
         int procNum = MapBinToProc(BinNum,NumberofProcessors);
         if(procNum != rank)
         { // populate the list of outgoing particles 
-            OutgoingParticles[procNum].push_back(local[i]);
-            local.erase(local.begin()+i); // remove particle from our local group. 
+            OutgoingParticles[procNum].push_back(localParticleVector[i]);
+            localparticleVector.erase(localParticleVector.begin()+i); // remove particle from our local group. 
             nlocal --; // hope we don't lose comms!
         }
     }
@@ -328,7 +395,7 @@ void MoveParticles(particle_t *particles, int rank, int NumberofProcessors, cons
 
         }
         // reset the outgoing buffer. 
-        OutgoingParticles[procNum].clear();
+        //OutgoingParticles[procNum].clear();
     }
 
     //the largest number of particles we could possibly recieve is n. 
@@ -342,13 +409,14 @@ void MoveParticles(particle_t *particles, int rank, int NumberofProcessors, cons
         //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
         MPI_Recv(MovedParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 0, MPI_COMM_WORLD, &status);
         
+        // get the number of particles we have revieved 
         MPI_Get_count(&status, PARTICLE, &RecvCount);
 
         // for each recieved particle 
         for(int newParticle = 0; newParticle < RecvCount; newParticle++)
         {
             // add to our local collection of particles 
-            local.push_back(MovedParticleRecvBuffer[i]);
+            localparticleVector.push_back(MovedParticleRecvBuffer[newParticle]);
             //MapParticleToBin(MovedParticleRecvBuffer[i], NumofBinsEachSide)
         }
 

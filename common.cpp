@@ -64,12 +64,17 @@ double getBinSize()
 }
 
 int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors, int size)
-{
+{ 
     // need to convert to a float first otherwise the value will be rounded down. 
     return ceil((float)NumberOfBinsperSide/NumberofProcessors);
 }
 
-std::vector< std::vector< particle_t> > OutgoingParticles;
+std::vector<int> getBoarderPeers(int rank)
+{ ///FIXME!
+
+    return std::vector<int> (rank);
+}
+
 std::vector< std::vector<int> > MapOfBinsToProcs;
 
 std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int NumberofProcessors, int size)
