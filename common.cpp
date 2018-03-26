@@ -21,7 +21,7 @@ double size;
 #define min_r_SQ (min_r*min_r)
 #define dt      0.0005
 
-
+std::vector< std::vector<int> > MapOfBinsToProcs;
 //
 //  timer
 //
@@ -63,14 +63,66 @@ double getBinSize()
     return cutoff;
 }
 
-int getRowsPerProc(int Bins, int NumberofProcessors )
+int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors, int size)
 {
     // need to convert to a float first otherwise the value will be rounded down. 
-    return ceil((float)Bins/NumberofProcessors);
+    return ceil((float)NumberOfBinsperSide/NumberofProcessors);
+}
+
+std::vector< std::vector< particle_t> > OutgoingParticles;
+std::vector< std::vector<int> > MapOfBinsToProcs;
+
+std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int NumberofProcessors, int size)
+{ 
+
+    
+    int LogOfProcs = std::log2(NumberofProcessors);
+    int BinsPerProc = 0;
+
+    if(LogOfProcs % 2 == 0)
+    {
+        BinsPerProc = NumberOfBins/NumberofProcessors; 
+
+        // terrible n^3 bu it's always a small number and only run once. 
+        for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+        {
+            int offset = ProcNum * LogOfProcs; 
+
+            MapOfBinsToProcs.push_back(ProcNum);
+
+            for (int col = 0; col < LogOfProcs; col++;)
+            {
+                for(int Row = 0; Row < LogOfProcs; LogOfProcs++;)
+                {
+                    int BlockNum = offset + Row + (col* size);
+                    MapOfBinsToProcs[ProcNum].append(BlockNum); 
+                } 
+            }
+
+        } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+
+    }
+    else // we have an odd power of two 
+    {
+
+    }
+
+    return MapOfBinsToProcs;
+}
+
+
+std::vector<int > getGhostbins(int size, int rank, const std::vector< std::vector<int> > & BinsByProc)
+{ // need to finish 
+
+    // lowest number is top left 
+    // highest number in bottom right. 
+    topleft = std::min_element(BinsByProc[rank]);
+    bottonright = std::max_element(BinsByProc[rank]);
+
 }
 
 // bins will not not move. Once set, their location is static 
-int MapBinToProc(int Bin, int NumberOfProcs)
+int MapBinToProc(int Bin, int NumberofProcessors)
 { // untested this needs to be figured out
     int Processor = 0; 
     return Processor;

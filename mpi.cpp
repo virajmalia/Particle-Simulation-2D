@@ -220,6 +220,7 @@ int main(int argc, char **argv)
     //free( partition_offsets );
     //free( partition_sizes );
     free( local );
+    free(nlocal);
     free( particles );
     if( fsave )
         fclose( fsave );
@@ -228,8 +229,6 @@ int main(int argc, char **argv)
     
     return 0;
 }
-
-
 
 
 // would be much cleaner to use multiple returns in C++ 14 but I am not placing faith in compiler support. It's a very new feature
@@ -243,12 +242,7 @@ void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, co
     //int *partition_sizes = (int*) malloc( NumberofProcessors * sizeof(int) );
     
     std::vector<int> partition_sizes(NumberofProcessors);
-
-    // temp storage for particles in correct order
-    nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
-    *nlocal = partition_sizes[rank];
-    local = (particle_t*) malloc( *nlocal * sizeof(particle_t) );
-
+    
 
     std::vector< std::vector<particle_t> > ParticlesPerProcecesor(NumberofProcessors,std::vector<particle_t>() );
 
@@ -279,8 +273,8 @@ void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, co
         ProcNumCount +=1; 
     }
 
+    nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
     *nlocal = partition_sizes[rank];
-
     local = (particle_t*) malloc( *nlocal * sizeof(particle_t) );
 
     // scatter the particles to the processors. More scattered than the programmer's brain. 
@@ -292,4 +286,77 @@ void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, co
     //free(particlesassignedtoproc);
 }
 
+
+void BoarderParticles()
+{ //These are redundant particles that exists on other processors but, are needed for computing forces on the local processor. 
+    
+}
+
+void MoveParticles(particle_t *particles, int rank, int NumberofProcessors, const int NumofBinsEachSide)
+{
+    // moved particles 
+    for( int i = 0; i < nlocal; i++ )
+    {
+        move( local[i] );
+        //this is the global n=bin number
+        int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
+        int procNum = MapBinToProc(BinNum,NumberofProcessors);
+        if(procNum != rank)
+        { // populate the list of outgoing particles 
+            OutgoingParticles[procNum].push_back(local[i]);
+            local.erase(local.begin()+i); // remove particle from our local group. 
+            nlocal --; // hope we don't lose comms!
+        }
+    }
+    // send to other processors with a non blocking send so we don't cause a deadlock
+    for(int ProcId = 0; ProcId < NumberofProcessors; ProcId++)
+    {
+        if(ProcId != rank) // we are not sending particles to ourself. This rank's outgoing vector should be empty but, oh well 
+        {
+            if(OutgoingParticles[ProcId].empty() == false) 
+            {
+                MPI_Request request;
+                MPI_Ibsend(&OutgoingParticles[ProcId][0], OutgoingParticles[ProcId].size(), PARTICLE, ProcId, 0, MPI_COMM_WORLD, &request);
+                MPI_Request_free(&request);
+            }
+            else // we need to send a message to unblock the recv on other processors. 
+            {
+                MPI_Request request;
+                MPI_Ibsend(0, 0, PARTICLE, ProcId, 0, MPI_COMM_WORLD, &request);
+                MPI_Request_free(&request);
+            }
+
+        }
+        // reset the outgoing buffer. 
+        OutgoingParticles[procNum].clear();
+    }
+
+    //the largest number of particles we could possibly recieve is n. 
+    particle_t *MovedParticleRecvBuffer = (particle_t*) malloc( n * sizeof(particle_t) );
+
+    for(int ProcIdRecv = 0; ProcIdRecv < NumberofProcessors; ProcIdRecv++)
+    {
+        // recieve boarder 
+        int RecvCount = 0;
+        MPI_Status status;
+        //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
+        MPI_Recv(MovedParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 0, MPI_COMM_WORLD, &status);
+        
+        MPI_Get_count(&status, PARTICLE, &RecvCount);
+
+        // for each recieved particle 
+        for(int newParticle = 0; newParticle < RecvCount; newParticle++)
+        {
+            // add to our local collection of particles 
+            local.push_back(MovedParticleRecvBuffer[i]);
+            //MapParticleToBin(MovedParticleRecvBuffer[i], NumofBinsEachSide)
+        }
+
+        // add total to the local count 
+        *nlocal += RecvCount;
+    }
+    // freee 
+    free(MovedParticleRecvBuffer);
+
+}
 
