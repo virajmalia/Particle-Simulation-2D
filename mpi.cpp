@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "common.h"
 #include <vector>
+#include <algorithm>    // std::reverse
 //#include "mpi_tools.h"
 
 MPI_Datatype PARTICLE;
@@ -299,15 +300,15 @@ void ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, co
 }
 
 // spoky! These are need for the local caclulations but forces are not computed on them. 
-void GhostParticles(std::vector <particle_t> & localparticleVector,int rank)
+void GhostParticles(std::vector <particle_t> & localparticleVector,int rank, int n,int *nlocal, int NumberofProcessors)
 { //These are redundant particles that exists on other processors but, are needed for computing forces on the local processor. 
     // since we can't request the particle it make more sense for each processor to send them to it's peers. 
-    std::vector<int> BoarderRanks = getBoarderPeers(rank);
+    std::vector<int> BoarderPeers = getBoarderPeers(rank);
     // Send border particles to neighbors
 
     std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
 
-    for (int Peer = 0; Peer < BoarderRanks.size(); Peer++)
+    for (int Peer = 0; Peer < BoarderPeers.size(); Peer++)
     {
             if(OutgoingParticles[Peer].empty() == false) 
             {
@@ -330,13 +331,13 @@ void GhostParticles(std::vector <particle_t> & localparticleVector,int rank)
     //the largest number of particles we could possibly recieve is n. 
     particle_t *GhostParticleRecvBuffer = (particle_t*) malloc( n * sizeof(particle_t) );
 
-    for(int ProcIdRecv = 0; ProcIdRecv < NumberofBoarderPeers; ProcIdRecv++)
+    for(auto Peer: BoarderPeers) // only get ghost particles from our peers
     {
         // recieve boarder 
         int RecvCount = 0;
         MPI_Status status;
         //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
-        MPI_Recv(GhostParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(GhostParticleRecvBuffer, n, PARTICLE, Peer, 0, MPI_COMM_WORLD, &status);
         
         // get the number of particles we have revieved 
         MPI_Get_count(&status, PARTICLE, &RecvCount);
@@ -356,25 +357,37 @@ void GhostParticles(std::vector <particle_t> & localparticleVector,int rank)
     free(GhostParticleRecvBuffer);
 }
 
-void MoveParticles(std::vector <particle_t> & localparticleVector, int rank, int NumberofProcessors, const int NumofBinsEachSide)
+void MoveParticles(std::vector <particle_t> & localparticleVector, int rank, int n, int *nlocal,int NumberofProcessors, const int NumofBinsEachSide)
 {
     // moved particles 
     // outgoing particles 
     std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
 
-    for( int i = 0; i < nlocal; i++ )
+    std::vector<int> OutgoingIndexes; 
+    for( int i = 0; i < *nlocal; i++ )
     {
-        move( localParticleVector[i] );
+        move( localparticleVector[i] );
         //this is the global n=bin number
-        int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
+        int BinNum = MapParticleToBin(localparticleVector[i],NumofBinsEachSide);
         int procNum = MapBinToProc(BinNum,NumberofProcessors);
         if(procNum != rank)
         { // populate the list of outgoing particles 
-            OutgoingParticles[procNum].push_back(localParticleVector[i]);
-            localparticleVector.erase(localParticleVector.begin()+i); // remove particle from our local group. 
-            nlocal --; // hope we don't lose comms!
+            OutgoingParticles[procNum].push_back(localparticleVector[i]);
+            OutgoingIndexes.push_back(i);
+
         }
     }
+
+    // reverse the direction of the outgoing vector so we don't have to re calculate indexes every loop 
+    std::reverse(OutgoingIndexes.begin(),OutgoingIndexes.end());
+
+    for(auto index:OutgoingIndexes)
+    { // remove outgoing partices from local buffer
+        localparticleVector.erase(localparticleVector.begin()+index); // remove particle from our local group. 
+        *nlocal = (*nlocal)-1; // hope we don't lose comms!
+    }
+
+
     // send to other processors with a non blocking send so we don't cause a deadlock
     for(int ProcId = 0; ProcId < NumberofProcessors; ProcId++)
     {

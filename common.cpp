@@ -1,14 +1,7 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <float.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-#include <sys/time.h>
+
 #include "common.h"
 
-#include <immintrin.h>
+
 
 double size;
 
@@ -21,7 +14,7 @@ double size;
 #define min_r_SQ (min_r*min_r)
 #define dt      0.0005
 
-std::vector< std::vector<int> > MapOfBinsToProcs;
+
 //
 //  timer
 //
@@ -75,12 +68,11 @@ std::vector<int> getBoarderPeers(int rank)
     return std::vector<int> (rank);
 }
 
-std::vector< std::vector<int> > MapOfBinsToProcs;
-
 std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int NumberofProcessors, int size)
 { 
 
-    
+    std::vector< std::vector<int> > MapOfBinsToProcs(NumberofProcessors, std::vector<int>(0));
+
     int LogOfProcs = std::log2(NumberofProcessors);
     int BinsPerProc = 0;
 
@@ -89,18 +81,18 @@ std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int Numbe
         BinsPerProc = NumberOfBins/NumberofProcessors; 
 
         // terrible n^3 bu it's always a small number and only run once. 
-        for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+        for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++)
         {
             int offset = ProcNum * LogOfProcs; 
 
-            MapOfBinsToProcs.push_back(ProcNum);
+            //MapOfBinsToProcs.push_back(ProcNum);
 
-            for (int col = 0; col < LogOfProcs; col++;)
+            for (int col = 0; col < LogOfProcs; col++)
             {
-                for(int Row = 0; Row < LogOfProcs; LogOfProcs++;)
+                for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
                 {
                     int BlockNum = offset + Row + (col* size);
-                    MapOfBinsToProcs[ProcNum].append(BlockNum); 
+                    MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
                 } 
             }
 
@@ -109,7 +101,11 @@ std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int Numbe
     }
     else // we have an odd power of two 
     {
+        // divide bins into 2 sets 
 
+        //divide each set of bins by LogOfProcs -1
+        // same algorithm as above. 
+ 
     }
 
     return MapOfBinsToProcs;
@@ -119,10 +115,15 @@ std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int Numbe
 std::vector<int > getGhostbins(int size, int rank, const std::vector< std::vector<int> > & BinsByProc)
 { // need to finish 
 
+
     // lowest number is top left 
     // highest number in bottom right. 
-    topleft = std::min_element(BinsByProc[rank]);
-    bottonright = std::max_element(BinsByProc[rank]);
+    // int topleft = std::min_element(BinsByProc[rank]);
+    // int bottonright = std::max_element(BinsByProc[rank]);
+
+    std::vector<int> ghostbins;
+
+    return ghostbins;
 
 }
 

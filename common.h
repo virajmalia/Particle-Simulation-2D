@@ -1,6 +1,20 @@
 #ifndef __CS267_COMMON_H__
 #define __CS267_COMMON_H__
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <float.h>
+#include <string.h>
+#include <math.h>
+#include <time.h>
+#include <sys/time.h>
+#include <immintrin.h>
+#include <cmath> 
+#include <vector>
+#include <algorithm>
+
+
 inline int min( int a, int b ) { return a < b ? a : b; }
 inline int max( int a, int b ) { return a > b ? a : b; }
 
@@ -50,6 +64,7 @@ int getbinNumber();
 double getSize();
 double getBinSize();
 int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
+std::vector<int> getBoarderPeers(int rank);
 int MapBinToProc(int Bin, int NumberOfProcs);
 int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide);
 int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors );
