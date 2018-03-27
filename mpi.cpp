@@ -91,6 +91,7 @@ int main(int argc, char **argv)
 
     }
 
+    double size = getSize(); 
     int NumofBinsEachSide = getNumberofBins(size);
     int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
     // allocate storage for local partition
@@ -108,10 +109,10 @@ int main(int argc, char **argv)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    int LocalNumofBinsEachSide = 0; ///FIXME.
-    int NumberOfBinsLocally = 0;
-     /// Make the vector of vectors. The bins are vectors
-    std::vector< std::vector<int> > Bins(NumofBinsLocally, std::vector<int>(0));
+    // int LocalNumofBinsEachSide = 0; ///FIXME.
+    // int NumberOfBinsLocally = 0;
+    //  /// Make the vector of vectors. The bins are vectors
+    // std::vector< std::vector<int> > Bins(NumofBinsLocally, std::vector<int>(0));
 
     //  simulate a number of time steps
     //

@@ -71,6 +71,7 @@ int main( int argc, char **argv )
 
     //init_particles_SOA( n, particlesSOA );
 
+    double size = getSize(); 
     int NumofBinsEachSide = getNumberofBins(size);
     int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
     // //std::vector<int> * Bins =( std::vector<int> *)malloc( (NumofBins^2) * sizeof( std::vector<int> ));
@@ -85,7 +86,7 @@ int main( int argc, char **argv )
     //  simulate a number of time steps
     //
 
-    printf("Num of bins each side: %d size is: %f BinSize: %f \n", getbinNumber(), getSize(), getBinSize());
+    printf("Num of bins each side: %d size is: %f BinSize: %f \n", getNumberofBins(size), getSize(), getBinSize());
 
     double simulation_time = read_timer( );
 
