@@ -56,7 +56,7 @@ double getBinSize()
     return cutoff;
 }
 
-int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors, int size)
+int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors)
 { 
     // need to convert to a float first otherwise the value will be rounded down. 
     return ceil((float)NumberOfBinsperSide/NumberofProcessors);
@@ -68,7 +68,7 @@ std::vector<int> getBoarderPeers(int rank)
     return std::vector<int> (rank);
 }
 
-std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int NumberofProcessors, int size)
+std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBinsperSide,int NumberofProcessors, int size)
 { 
 
     std::vector< std::vector<int> > MapOfBinsToProcs(NumberofProcessors, std::vector<int>(0));
@@ -78,7 +78,7 @@ std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int Numbe
 
     if(LogOfProcs % 2 == 0)
     {
-        BinsPerProc = NumberOfBins/NumberofProcessors; 
+        //BinsPerProc = (NumberOfBins*NumberOfBinsperSide)/NumberofProcessors; 
 
         // terrible n^3 bu it's always a small number and only run once. 
         for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++)
@@ -102,6 +102,29 @@ std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBins,int Numbe
     else // we have an odd power of two 
     {
         // divide bins into 2 sets 
+        int topsection = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); // rounds down 
+        int bottomsection = NumberOfBinsperSide - topsection; 
+
+        // do top 
+        // for(int ProcNum = 0; ProcNum < NumberofProcessors/2; NumberofProcessors++)
+        // {
+        //     int offset = ProcNum * LogOfProcs; 
+
+        //     //MapOfBinsToProcs.push_back(ProcNum);
+
+        //     for (int col = 0; col < LogOfProcs; col++)
+        //     {
+        //         for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
+        //         {
+        //             int BlockNum = offset + Row + (col* size);
+        //             MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
+        //         } 
+        //     }
+
+        // } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+
+        // do bottom 
+
 
         //divide each set of bins by LogOfProcs -1
         // same algorithm as above. 
