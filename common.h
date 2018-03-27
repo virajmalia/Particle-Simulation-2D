@@ -60,7 +60,7 @@ double read_timer( );
 //  simulation routines
 //
 void set_size( int n );
-int getbinNumber();
+int getNumberofBins( int size);
 double getSize();
 double getBinSize();
 int getRowsPerProc(int BinsEachSide, int NumberofProcessors );

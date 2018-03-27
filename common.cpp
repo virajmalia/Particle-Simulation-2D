@@ -40,7 +40,7 @@ void set_size( int n )
     size = sqrt( density * n );
 }
 
-int getbinNumber()
+int getNumberofBins( int size)
 {
     // need to round up for partial bins
     return (int)ceil( size/cutoff );
@@ -55,139 +55,6 @@ double getBinSize()
 {
     return cutoff;
 }
-
-int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors)
-{ 
-    // need to convert to a float first otherwise the value will be rounded down. 
-    return ceil((float)NumberOfBinsperSide/NumberofProcessors);
-}
-
-std::vector<int> getBoarderPeers(int rank)
-{ ///FIXME!
-
-    return std::vector<int> (rank);
-}
-
-std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBinsperSide,int NumberofProcessors, int size)
-{ 
-
-    std::vector< std::vector<int> > MapOfBinsToProcs(NumberofProcessors, std::vector<int>(0));
-
-    int LogOfProcs = std::log2(NumberofProcessors);
-    int BinsPerProc = 0;
-
-    if(LogOfProcs % 2 == 0)
-    {
-        //BinsPerProc = (NumberOfBins*NumberOfBinsperSide)/NumberofProcessors; 
-
-        // terrible n^3 bu it's always a small number and only run once. 
-        for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++)
-        {
-            int offset = ProcNum * LogOfProcs; 
-
-            //MapOfBinsToProcs.push_back(ProcNum);
-
-            for (int col = 0; col < LogOfProcs; col++)
-            {
-                for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
-                {
-                    int BlockNum = offset + Row + (col* size);
-                    MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
-                } 
-            }
-
-        } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
-
-    }
-    else // we have an odd power of two 
-    {
-        // divide bins into 2 sets 
-        int topsection = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); // rounds down 
-        int bottomsection = NumberOfBinsperSide - topsection; 
-
-        // do top 
-        // for(int ProcNum = 0; ProcNum < NumberofProcessors/2; NumberofProcessors++)
-        // {
-        //     int offset = ProcNum * LogOfProcs; 
-
-        //     //MapOfBinsToProcs.push_back(ProcNum);
-
-        //     for (int col = 0; col < LogOfProcs; col++)
-        //     {
-        //         for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
-        //         {
-        //             int BlockNum = offset + Row + (col* size);
-        //             MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
-        //         } 
-        //     }
-
-        // } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
-
-        // do bottom 
-
-
-        //divide each set of bins by LogOfProcs -1
-        // same algorithm as above. 
- 
-    }
-
-    return MapOfBinsToProcs;
-}
-
-
-std::vector<int > getGhostbins(int size, int rank, const std::vector< std::vector<int> > & BinsByProc)
-{ // need to finish 
-
-
-    // lowest number is top left 
-    // highest number in bottom right. 
-    // int topleft = std::min_element(BinsByProc[rank]);
-    // int bottonright = std::max_element(BinsByProc[rank]);
-
-    std::vector<int> ghostbins;
-
-    return ghostbins;
-
-}
-
-// bins will not not move. Once set, their location is static 
-int MapBinToProc(int Bin, int NumberofProcessors)
-{ // untested this needs to be figured out
-    int Processor = 0; 
-    return Processor;
-
-}
-
-int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
-{
-    // this will give you which bin the particle must be locatd in 
-    double binsize = getBinSize();
-              //printf("Test4\n");
-              // get the bin index
-
-   int BinX = (int)(particle.x/binsize);
-   int BinY = (int)(particle.y/binsize);
-
-   // int BinX = (int)(particlesSOA->x[particle]/binsize);
-   // int BinY = (int)(particlesSOA->y[particle]/binsize);
-
-   //printf("Adding particle\n");
-   return  (BinX + NumofBinsEachSide*BinY);
-}
-
-int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors )
-{   // this will retun the processor to which a given particle belongs. 
-    int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
-    return MapBinToProc(BinNum,NumberofProcessors);
-}
-// int getProcessorForBin(int Bin)
-// {
-//     return 
-// }
-
-//
-//  Initialize the particle positions and velocities
-
 
 void init_particles( int n, particle_t *p )
 {
@@ -424,6 +291,146 @@ void move_SOA( particle_SOA_t &p,int I)
     }
 
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////// MPI /////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors)
+{ 
+    // need to convert to a float first otherwise the value will be rounded down. 
+    return ceil((float)NumberOfBinsperSide/NumberofProcessors);
+}
+
+std::vector<int> getBoarderPeers(int rank)
+{ ///FIXME!
+
+    return std::vector<int> (rank);
+}
+
+std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBinsperSide,int NumberofProcessors, int size)
+{ 
+
+    std::vector< std::vector<int> > MapOfBinsToProcs(NumberofProcessors, std::vector<int>(0));
+
+    int LogOfProcs = std::log2(NumberofProcessors);
+    int BinsPerProc = 0;
+
+    if(LogOfProcs % 2 == 0)
+    {
+        //BinsPerProc = (NumberOfBins*NumberOfBinsperSide)/NumberofProcessors; 
+
+        // terrible n^3 bu it's always a small number and only run once. 
+        for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++)
+        {
+            int offset = ProcNum * LogOfProcs; 
+
+            //MapOfBinsToProcs.push_back(ProcNum);
+
+            for (int col = 0; col < LogOfProcs; col++)
+            {
+                for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
+                {
+                    int BlockNum = offset + Row + (col* size);
+                    MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
+                } 
+            }
+
+        } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+
+    }
+    else // we have an odd power of two 
+    {
+        // divide bins into 2 sets 
+        int topsection = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); // rounds down 
+        int bottomsection = NumberOfBinsperSide - topsection; 
+
+        // do top 
+        // for(int ProcNum = 0; ProcNum < NumberofProcessors/2; NumberofProcessors++)
+        // {
+        //     int offset = ProcNum * LogOfProcs; 
+
+        //     //MapOfBinsToProcs.push_back(ProcNum);
+
+        //     for (int col = 0; col < LogOfProcs; col++)
+        //     {
+        //         for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
+        //         {
+        //             int BlockNum = offset + Row + (col* size);
+        //             MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
+        //         } 
+        //     }
+
+        // } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+
+        // do bottom 
+
+
+        //divide each set of bins by LogOfProcs -1
+        // same algorithm as above. 
+ 
+    }
+
+    return MapOfBinsToProcs;
+}
+
+
+std::vector<int > getGhostbins(int size, int rank, const std::vector< std::vector<int> > & BinsByProc)
+{ // need to finish 
+
+
+    // lowest number is top left 
+    // highest number in bottom right. 
+    // int topleft = std::min_element(BinsByProc[rank]);
+    // int bottonright = std::max_element(BinsByProc[rank]);
+
+    std::vector<int> ghostbins;
+
+    return ghostbins;
+
+}
+
+// bins will not not move. Once set, their location is static 
+int MapBinToProc(int Bin, int NumberofProcessors)
+{ // untested this needs to be figured out
+    int Processor = 0; 
+    return Processor;
+
+}
+
+int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
+{
+    // this will give you which bin the particle must be locatd in 
+    double binsize = getBinSize();
+              //printf("Test4\n");
+              // get the bin index
+
+   int BinX = (int)(particle.x/binsize);
+   int BinY = (int)(particle.y/binsize);
+
+   // int BinX = (int)(particlesSOA->x[particle]/binsize);
+   // int BinY = (int)(particlesSOA->y[particle]/binsize);
+
+   //printf("Adding particle\n");
+   return  (BinX + NumofBinsEachSide*BinY);
+}
+
+int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors )
+{   // this will retun the processor to which a given particle belongs. 
+    int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
+    return MapBinToProc(BinNum,NumberofProcessors);
+}
+// int getProcessorForBin(int Bin)
+// {
+//     return 
+// }
+
+//
+//  Initialize the particle positions and velocities
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

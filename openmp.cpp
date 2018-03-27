@@ -65,7 +65,7 @@ int main( int argc, char **argv )
 
     //init_particles_SOA( n, particlesSOA );
 
-    int NumofBinsEachSide = getbinNumber();
+    int NumofBinsEachSide = getNumberofBins(size);
     int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
     // //std::vector<int> * Bins =( std::vector<int> *)malloc( (NumofBins^2) * sizeof( std::vector<int> ));
     // //std::vector<std:vector<int>> Bins; 

@@ -91,15 +91,12 @@ int main(int argc, char **argv)
 
     }
 
-    int NumofBinsEachSide = getbinNumber();
+    int NumofBinsEachSide = getNumberofBins(size);
     int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
     // allocate storage for local partition
     //
     //int nlocal;
     //particle_t *local; //  = (particle_t*) malloc( nlocal * sizeof(particle_t) );
-
-    /// Make the vector of vectors. The bins are vectors
-    std::vector< std::vector<int> > Bins(NumofBins, std::vector<int>(0));
 
     // send the assign the particles to each procssor based on which bin they are located in. local particles will be populated from this array. 
     std::vector <particle_t> localParticleVector = ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank);
@@ -110,7 +107,12 @@ int main(int argc, char **argv)
  // probaly going to have to change this as well 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    //
+
+    int LocalNumofBinsEachSide = 0; ///FIXME.
+    int NumberOfBinsLocally = 0;
+     /// Make the vector of vectors. The bins are vectors
+    std::vector< std::vector<int> > Bins(NumofBinsLocally, std::vector<int>(0));
+
     //  simulate a number of time steps
     //
     double simulation_time = read_timer();
@@ -121,6 +123,19 @@ int main(int argc, char **argv)
         davg = 0.0;
 
         GhostParticles(localParticleVector,rank, n,n_proc);
+
+        // populate LOCAL BINS!!!!!!!!!  WE ARE DONE WITH THE GLOBAL BINS
+        // std::set<int> BinsWithParticles;
+
+        // for(int SingleParticleIndex = 0 ; SingleParticleIndex < localParticleVector.size(); SingleParticleIndex++)
+        // {
+        //     // need to test for different sized local bins
+        //     int localbinnumber = MapParticleToBin(localParticleVector[SingleParticleIndex],LocalNumofBinsEachSide);
+        //     Bins[localbinnumber].push_back(SingleParticleIndex);
+        //     // store the bin which contain a particle. We will ignore the empty ones
+        //     BinsWithParticles.insert(localbinnumber);
+        // }
+        
 
 
         //  // 
