@@ -127,8 +127,8 @@ int main(int argc, char **argv)
     std::vector <particle_t> GhostParticleTopVector;
     std::vector <particle_t> GhostParticleBottomVector;
 
-    std::vector< std::vector<int> > GhostBinTop(NumofBinsEachSide);
-    std::vector< std::vector<int> > GhostBinBottom(NumofBinsEachSide);
+    std::vector< std::vector<int> > GhostBinTop(LocalNumberofBins, std::vector<int>(0));
+    std::vector< std::vector<int> > GhostBinBottom(LocalNumberofBins, std::vector<int>(0));
 
     // int LocalNumofBinsEachSide = 0; ///FIXME.
     // int NumberOfBinsLocally = 0;
@@ -183,6 +183,26 @@ int main(int argc, char **argv)
         // send out ghost particles to other processors // get ghost particles from other processors 
 
         GhostParticles(rank,n,n_proc, LocalNumberofBins, NumofBinsEachSide,GhostParticleTopVector,GhostParticleBottomVector, Bins, localParticleVector);
+
+        // ghost particle binning......
+        for( int TopGhostIndex = 0; TopGhostIndex < GhostParticleTopVector.size(); TopGhostIndex++ )
+        { // already sorted in the Y
+            double binsize = getBinSize();
+            int BinX = (int)(GhostParticleTopVector[TopGhostIndex].x/binsize);
+            GhostBinTop[BinX].push_back(BinX);
+        }
+
+        for( int BottomGhostIndex = 0; BottomGhostIndex < GhostParticleBottomVector.size(); BottomGhostIndex++ )
+        {
+            double binsize = getBinSize();
+            int BinX = (int)(GhostParticleBottomVector[BottomGhostIndex].x/binsize);
+            GhostBinTop[BinX].push_back(BinX);
+        }
+
+        
+
+
+        
 
 
 
