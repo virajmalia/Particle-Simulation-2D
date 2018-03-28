@@ -51,6 +51,16 @@ typedef struct
 	double * ay;
 
 } particle_SOA_t;
+
+
+typedef struct Local_Space
+{
+	double localSizeX;
+	double localSizeY; 
+	double Ceiling;
+	double Floor; 
+
+} Local_Space_t;
 //
 //  timing routines
 //
@@ -60,14 +70,9 @@ double read_timer( );
 //  simulation routines
 //
 void set_size( int n );
-int getNumberofBins( int size);
+int getNumberofBins( double size);
 double getSize();
 double getBinSize();
-int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
-std::vector<int> getBoarderPeers(int rank);
-int MapBinToProc(int Bin, int NumberOfProcs);
-int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide);
-int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors );
 void init_particles( int n, particle_t *p );
 void init_particles_SOA( int n, particle_SOA_t *p );
 void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg);
@@ -75,6 +80,22 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
 void move( particle_t &p );
 void move_SOA( particle_SOA_t &p,int I);
 
+int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
+int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int rank, int NumberofProcessors);
+
+void set_local_space(double size, int rank, int GlobalNumberOfBinsEachSide, int NumberofProcessors);
+double getLocalYSize();
+double getLocalXSize();
+std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumofBinsEachSide, const int NumberofProcessors, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec);
+std::vector<particle_t> getGhostParticlesBottom(const int rank, const int LocalNumofBinsEachSide, const int NumberoflocalBins, const int NumberofProcessors, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec);
+
+std::vector<int> getBoarderPeers(int rank, int NumberofProcessors);
+
+int MaplocalBinToGlobalBin(int rank, int localbinNumber, int NumberOfBinsperSide,int NumberofProcessors);
+int MapGlobalBinToLocalBin(int rank, int GlobalBinNumber, int NumberOfBinsperSide,int NumberofProcessors);
+int MapBinToProc(int Bin, int NumberOfProcs);
+int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide);
+int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors );
 
 //
 //  I/O routines

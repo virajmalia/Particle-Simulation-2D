@@ -5,11 +5,12 @@
 #include "common.h"
 #include <vector>
 #include <algorithm>    // std::reverse
+#include <set>
 //#include "mpi_tools.h"
 
 MPI_Datatype PARTICLE;
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank);
-void GhostParticles(std::vector <particle_t> & localparticleVector,int rank, int n,int NumberofProcessors);
+void GhostParticles(const int rank,const int n,const int NumberofProcessors, const int NumberoflocalBins, const int LocalNumofBinsEachSide, std::vector <particle_t> & GhostParticleTopVector,std::vector <particle_t> & GhostParticleBottomVector, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec);
 void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank, int n,const  int NumberofProcessors, const int NumofBinsEachSide);
 
 //
@@ -93,11 +94,20 @@ int main(int argc, char **argv)
 
     double size = getSize(); 
     int NumofBinsEachSide = getNumberofBins(size);
-    int NumofBins = NumofBinsEachSide*NumofBinsEachSide;
+    int NumofBins = NumofBinsEachSide*NumofBinsEachSide; // global bins 
     // allocate storage for local partition
     //
     //int nlocal;
     //particle_t *local; //  = (particle_t*) malloc( nlocal * sizeof(particle_t) );
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////// BEGIN LOCAL ///////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // send the assign the particles to each procssor based on which bin they are located in. local particles will be populated from this array. 
     std::vector <particle_t> localParticleVector = ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank);
@@ -108,6 +118,17 @@ int main(int argc, char **argv)
  // probaly going to have to change this as well 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    int LocalNumberofBins = getNumberofBinsLocal(NumofBinsEachSide, rank,n_proc);
+    
+    set_local_space(size, rank, NumofBinsEachSide, n_proc);
+
+    std::vector< std::vector<int> > Bins(LocalNumberofBins, std::vector<int>(0));
+
+    std::vector <particle_t> GhostParticleTopVector;
+    std::vector <particle_t> GhostParticleBottomVector;
+
+    std::vector< std::vector<int> > GhostBinTop(NumofBinsEachSide);
+    std::vector< std::vector<int> > GhostBinBottom(NumofBinsEachSide);
 
     // int LocalNumofBinsEachSide = 0; ///FIXME.
     // int NumberOfBinsLocally = 0;
@@ -123,7 +144,48 @@ int main(int argc, char **argv)
         dmin = 1.0;
         davg = 0.0;
 
-        GhostParticles(localParticleVector,rank, n,n_proc);
+        // clear bins 
+        for(int clear = 0; clear < LocalNumberofBins; clear++ )
+        {
+            Bins[clear].clear();
+        }
+
+
+        std::set<int> BinsWithParticles;
+        for(int particleIndex = 0; particleIndex < localParticleVector.size(); ++particleIndex)
+        {
+            // CHECKED///////////////////////
+              double binsize = getBinSize();
+              //printf("Test4\n");
+              // get the bin index
+
+               int BinX = (int)(localParticleVector[particleIndex].x/binsize);
+               int BinY = (int)(localParticleVector[particleIndex].y/binsize);
+               // int BinX = (int)(particlesSOA->x[particle]/binsize);
+               // int BinY = (int)(particlesSOA->y[particle]/binsize);
+               //printf("Adding particle\n");
+               int GlobalBinNum = BinX + NumofBinsEachSide*BinY;
+
+
+               int LocalBinNumber = MapGlobalBinToLocalBin(rank,GlobalBinNum,NumofBinsEachSide,n_proc);
+
+               //printf("Particle added to Bin %d", BinNum);
+               Bins[LocalBinNumber].push_back(particleIndex);
+
+               // store the bin which contain a particle. We will ignore the empty ones
+               BinsWithParticles.insert(LocalBinNumber);
+
+               //printf("P %d X: %f Y: %f BinNum: %d \n", particle,particles[particle].x, particles[particle].y,BinNum );
+               //printf("There are %d particles in bin %d\n",Bins[BinNum].size(),BinNum );
+        //     //addParticleToBin(n,BinX,BinY);
+        }
+
+        // send out ghost particles to other processors // get ghost particles from other processors 
+
+        GhostParticles(rank,n,n_proc, LocalNumberofBins, NumofBinsEachSide,GhostParticleTopVector,GhostParticleBottomVector, Bins, localParticleVector);
+
+
+
 
         // populate LOCAL BINS!!!!!!!!!  WE ARE DONE WITH THE GLOBAL BINS
         // std::set<int> BinsWithParticles;
@@ -314,8 +376,8 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
     // scatter the particles to the processors. More scattered than the programmer's brain. 
     MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes.data(), partition_offsets.data(), PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
 
-    printf("nlocal is %d \n", nlocal);
-    printf("local is %d \n", local);
+    // printf("nlocal is %d \n", nlocal);
+    // printf("local is %d \n", local);
 
     std::vector <particle_t> temp (local , local + nlocal);
 
@@ -330,16 +392,31 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
 }
 
 // spoky! These are need for the local caclulations but forces are not computed on them. 
-void GhostParticles(std::vector <particle_t> & localparticleVector,int rank, int n,int NumberofProcessors)
+void GhostParticles(const int rank,const int n,const int NumberofProcessors, const int NumberoflocalBins, const int LocalNumofBinsEachSide, std::vector <particle_t> & GhostParticleTopVector,std::vector <particle_t> & GhostParticleBottomVector, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec)
 { //These are redundant particles that exists on other processors but, are needed for computing forces on the local processor. 
     // since we can't request the particle it make more sense for each processor to send them to it's peers. 
-    std::vector<int> BoarderPeers = getBoarderPeers(rank);
+    std::vector<int> BoarderPeers = getBoarderPeers(rank,NumberofProcessors);
     // Send border particles to neighbors
 
-    std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
+    std::vector< std::vector<particle_t> > OutgoingParticles(BoarderPeers.size(),std::vector<particle_t>() );
+
 
     for (int Peer = 0; Peer < BoarderPeers.size(); Peer++)
     {
+
+            if(Peer < rank)
+            {
+                OutgoingParticles[Peer] = getGhostParticlesTop(rank,LocalNumofBinsEachSide, NumberofProcessors,LocalBins, localParticleVec);
+            }
+            else if(Peer > rank)  // peer is bigger 
+            {
+                OutgoingParticles[Peer] = getGhostParticlesBottom(rank,LocalNumofBinsEachSide, NumberoflocalBins, NumberofProcessors,LocalBins, localParticleVec);
+            }
+            else
+            {
+                printf("We have a bug in the send of GhostParticles");
+            }
+
             if(OutgoingParticles[Peer].empty() == false) 
             {
                 MPI_Request request;
@@ -359,10 +436,14 @@ void GhostParticles(std::vector <particle_t> & localparticleVector,int rank, int
 
     // same code as Move particles recv
     //the largest number of particles we could possibly recieve is n. 
-    particle_t *GhostParticleRecvBuffer = (particle_t*) malloc( n * sizeof(particle_t) );
+    
+    GhostParticleTopVector.clear();
+    GhostParticleBottomVector.clear();
+
 
     for(auto Peer: BoarderPeers) // only get ghost particles from our peers
     {
+        particle_t *GhostParticleRecvBuffer = (particle_t*) malloc( n * sizeof(particle_t) );
         // recieve boarder 
         int RecvCount = 0;
         MPI_Status status;
@@ -373,30 +454,53 @@ void GhostParticles(std::vector <particle_t> & localparticleVector,int rank, int
         MPI_Get_count(&status, PARTICLE, &RecvCount);
 
         // for each recieved particle 
-        for(int newParticle = 0; newParticle < RecvCount; newParticle++)
+
+        if(Peer < rank)
         {
-            // add to our local collection of particles 
-            localparticleVector.push_back(GhostParticleRecvBuffer[newParticle]);
-            //MapParticleToBin(MovedParticleRecvBuffer[i], NumofBinsEachSide)
+            for(int newParticle = 0; newParticle < RecvCount; newParticle++)
+            {
+                // add to our local collection of particles 
+                GhostParticleTopVector.push_back(GhostParticleRecvBuffer[newParticle]);
+                //MapParticleToBin(MovedParticleRecvBuffer[i], NumofBinsEachSide)
+            }
+
+        }
+        else if(Peer > rank) // ranks located below us!
+        {
+            for(int newParticle = 0; newParticle < RecvCount; newParticle++)
+            {
+                GhostParticleBottomVector.push_back(GhostParticleRecvBuffer[newParticle]);
+            }
+        }
+        else
+        {
+            printf("There is a bug in GhostParticles()!");
         }
 
         // add total to the local count 
         //*nlocal += RecvCount;
+        free(GhostParticleRecvBuffer);
     }
     // freee 
-    free(GhostParticleRecvBuffer);
+    
 }
 
 void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank, int n,const  int NumberofProcessors, const int NumofBinsEachSide)
 {
     // moved particles 
     // outgoing particles 
+
+    double Xsize = getLocalXSize();
+    double Ysize = getLocalYSize();
+
     std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
 
     std::vector<int> OutgoingIndexes; 
     for( int i = 0; i < localparticleVector.size(); i++ )
     {
-        move( localparticleVector[i] );
+        //move( localparticleVector[i] );
+
+        move( localparticleVector[i]);
         //this is the global n=bin number
         int BinNum = MapParticleToBin(localparticleVector[i],NumofBinsEachSide);
         int procNum = MapBinToProc(BinNum,NumberofProcessors);

@@ -86,7 +86,7 @@ int main( int argc, char **argv )
     //  simulate a number of time steps
     //
 
-    printf("Num of bins each side: %d size is: %f BinSize: %f \n", getNumberofBins(size), getSize(), getBinSize());
+    printf("Num of bins each side: %d size is: %f BinSize: %f \n", NumofBinsEachSide, getSize(), getBinSize());
 
     double simulation_time = read_timer( );
 

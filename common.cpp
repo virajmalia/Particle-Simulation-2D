@@ -5,6 +5,9 @@
 
 double size;
 
+Local_Space_t LocalSpaceInfo; 
+
+
 #define density 0.0005
 #define mass    0.01
 #define cutoff  0.01
@@ -40,7 +43,7 @@ void set_size( int n )
     size = sqrt( density * n );
 }
 
-int getNumberofBins( int size)
+int getNumberofBins( double size)
 {
     // need to round up for partial bins
     return (int)ceil( size/cutoff );
@@ -295,98 +298,224 @@ void move_SOA( particle_SOA_t &p,int I)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////// MPI /////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/// warning !! dependent on row divion!. Blocking to come later 
 int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors)
-{ 
+{  // we are just dividing the space up by row 
     // need to convert to a float first otherwise the value will be rounded down. 
     return ceil((float)NumberOfBinsperSide/NumberofProcessors);
 }
 
-std::vector<int> getBoarderPeers(int rank)
-{ ///FIXME!
 
-    return std::vector<int> (rank);
-}
+int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int rank, int NumberofProcessors)
+{
+    // this is for Rank 0 to NumberofProcessors -1. The last Proc gets the remainder 
+    int RowEachProc = getRowsPerProc(GlobalNumberOfBinsEachSide, NumberofProcessors);
 
-std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBinsperSide,int NumberofProcessors, int size)
-{ 
-
-    std::vector< std::vector<int> > MapOfBinsToProcs(NumberofProcessors, std::vector<int>(0));
-
-    int LogOfProcs = std::log2(NumberofProcessors);
-    int BinsPerProc = 0;
-
-    if(LogOfProcs % 2 == 0)
+    if((rank < NumberofProcessors -1) || (rank == 0))
     {
-        //BinsPerProc = (NumberOfBins*NumberOfBinsperSide)/NumberofProcessors; 
-
-        // terrible n^3 bu it's always a small number and only run once. 
-        for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++)
-        {
-            int offset = ProcNum * LogOfProcs; 
-
-            //MapOfBinsToProcs.push_back(ProcNum);
-
-            for (int col = 0; col < LogOfProcs; col++)
-            {
-                for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
-                {
-                    int BlockNum = offset + Row + (col* size);
-                    MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
-                } 
-            }
-
-        } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
-
+        return GlobalNumberOfBinsEachSide * RowEachProc;
     }
-    else // we have an odd power of two 
-    {
-        // divide bins into 2 sets 
-        int topsection = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); // rounds down 
-        int bottomsection = NumberOfBinsperSide - topsection; 
-
-        // do top 
-        // for(int ProcNum = 0; ProcNum < NumberofProcessors/2; NumberofProcessors++)
-        // {
-        //     int offset = ProcNum * LogOfProcs; 
-
-        //     //MapOfBinsToProcs.push_back(ProcNum);
-
-        //     for (int col = 0; col < LogOfProcs; col++)
-        //     {
-        //         for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
-        //         {
-        //             int BlockNum = offset + Row + (col* size);
-        //             MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
-        //         } 
-        //     }
-
-        // } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
-
-        // do bottom 
-
-
-        //divide each set of bins by LogOfProcs -1
-        // same algorithm as above. 
- 
+    else
+    {   // the last proc takes care of the remainder 
+        return (GlobalNumberOfBinsEachSide % RowEachProc) * GlobalNumberOfBinsEachSide;
     }
 
-    return MapOfBinsToProcs;
+
 }
 
+void set_local_space(double size, int rank, int GlobalNumberOfBinsEachSide, int NumberofProcessors)
+{
 
-std::vector<int > getGhostbins(int size, int rank, const std::vector< std::vector<int> > & BinsByProc)
+    int RowsPerProc = getRowsPerProc(GlobalNumberOfBinsEachSide, NumberofProcessors);
+    double BinSize = getBinSize();
+
+    if((rank < NumberofProcessors -1) || (rank == 0))
+    {   
+        LocalSpaceInfo.Floor = ( (rank + 1) * ( BinSize *  RowsPerProc) );
+    }
+    else // we are the remainder 
+    {
+        LocalSpaceInfo.Floor = size; 
+    }
+
+    LocalSpaceInfo.localSizeX = size; // always the same in the X
+    LocalSpaceInfo.Ceiling = ( rank * (BinSize *  RowsPerProc) );
+    LocalSpaceInfo.localSizeY = LocalSpaceInfo.Floor - LocalSpaceInfo.Ceiling;
+}
+
+double getLocalYSize()
+{
+    return LocalSpaceInfo.localSizeY; 
+}
+
+double getLocalXSize()
+{
+    return LocalSpaceInfo.localSizeX;
+}
+
+// binning must have already occured 
+std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumofBinsEachSide, const int NumberofProcessors, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec)
 { // need to finish 
-
-
     // lowest number is top left 
     // highest number in bottom right. 
     // int topleft = std::min_element(BinsByProc[rank]);
     // int bottonright = std::max_element(BinsByProc[rank]);
+    std::vector<particle_t> GhostParticlesTop;
 
-    std::vector<int> ghostbins;
+    if( (rank < 0 ) )  // if rank 0 and numprocessors is 1 we don't have any peers
+    {
+        for(int BinNum = 0; BinNum < LocalNumofBinsEachSide; BinNum++) 
+        {
+            for(int Ghostparticle = 0; Ghostparticle < LocalBins[BinNum].size();Ghostparticle++)
+            {
+                 GhostParticlesTop.push_back(localParticleVec[ LocalBins[BinNum][Ghostparticle] ]);
+            }  
+        }
 
-    return ghostbins;
+    }
+        
+    return GhostParticlesTop;
 
+}
+
+
+// binning must have already occured 
+std::vector<particle_t> getGhostParticlesBottom(const int rank, const int LocalNumofBinsEachSide, const int NumberoflocalBins, const int NumberofProcessors, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec)
+{
+    std::vector<particle_t> GhostParticlesBottom;
+
+    if( (rank < (NumberofProcessors - 1) ) )  // if rank 0 and numprocessors is 1 we don't have any peers  // if rank 0 and numprocessors is 1 we don't have any peers
+    {
+        for(int BinNum = (NumberoflocalBins - LocalNumofBinsEachSide); BinNum < NumberoflocalBins; BinNum++) 
+        {
+            for(int Ghostparticle = 0; Ghostparticle < LocalBins[BinNum].size();Ghostparticle++)
+            {
+                 GhostParticlesBottom.push_back(localParticleVec[ LocalBins[BinNum][Ghostparticle] ]);
+            }  
+        }
+
+    }
+
+    // PROC OF RANK = NUMBEROFPROC -1 DOES NOT HAVE A BOTTOM PEER
+        
+    return GhostParticlesBottom;
+}
+
+
+std::vector<int> getBoarderPeers(int rank, int NumberofProcessors)
+{ ///FIXME!
+    std::vector<int> Peers;
+
+    if(NumberofProcessors > 1) // if it's not we are the only process 
+    {
+        if(rank == 0)
+        { // we can only have a 
+            Peers.push_back(rank+1);
+        }
+        else if((rank > 0) && (rank <(NumberofProcessors -1) ) )
+        {
+            Peers.push_back(rank-1);
+            Peers.push_back(rank+1);
+        }
+        else // rank is equal to the numberofprc -1 
+        {
+            Peers.push_back(rank-1); 
+        }
+    }
+
+    return Peers;
+}
+
+int MaplocalBinToGlobalBin(int rank, int localbinNumber, int NumberOfBinsperSide,int NumberofProcessors)
+{
+    int RowsPerProc = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); 
+
+    return ((rank * NumberOfBinsperSide * RowsPerProc) + localbinNumber); // assuming localbins are the same lenght as the global bins. 
+}
+
+int MapGlobalBinToLocalBin(int rank, int GlobalBinNumber, int NumberOfBinsperSide,int NumberofProcessors)
+{
+    int RowsPerProc = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); 
+
+    return (GlobalBinNumber - (rank * NumberOfBinsperSide * RowsPerProc)); // assuming localbins are the same lenght as the global bins. 
+}
+
+
+
+
+std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBinsperSide,int NumberofProcessors)
+{ 
+
+    std::vector< std::vector<int> > MapOfBinsToProcs(NumberofProcessors, std::vector<int>(0));
+
+    // for(int ProcId = 0; ProcId < NumberofProcessors; ProcId)
+    // {
+    //     MapOfBinsToProcs[ProcId].push_back();
+    // }
+
+    //// do this later
+
+    // int LogOfProcs = std::log2(NumberofProcessors);
+    // int BinsPerProc = 0;
+
+    // if(LogOfProcs % 2 == 0)
+    // {
+    //     //BinsPerProc = (NumberOfBins*NumberOfBinsperSide)/NumberofProcessors; 
+
+    //     // terrible n^3 bu it's always a small number and only run once. 
+    //     for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++)
+    //     {
+    //         int offset = ProcNum * LogOfProcs; 
+
+    //         //MapOfBinsToProcs.push_back(ProcNum);
+
+    //         for (int col = 0; col < LogOfProcs; col++)
+    //         {
+    //             for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
+    //             {
+    //                 int BlockNum = offset + Row + (col* size);
+    //                 MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
+    //             } 
+    //         }
+
+    //     } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+
+    // }
+    // else // we have an odd power of two 
+    // {
+    //     // divide bins into 2 sets 
+    //     int topsection = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); // rounds down 
+    //     int bottomsection = NumberOfBinsperSide - topsection; 
+
+    //     // do top 
+    //     // for(int ProcNum = 0; ProcNum < NumberofProcessors/2; NumberofProcessors++)
+    //     // {
+    //     //     int offset = ProcNum * LogOfProcs; 
+
+    //     //     //MapOfBinsToProcs.push_back(ProcNum);
+
+    //     //     for (int col = 0; col < LogOfProcs; col++)
+    //     //     {
+    //     //         for(int Row = 0; Row < LogOfProcs; LogOfProcs++)
+    //     //         {
+    //     //             int BlockNum = offset + Row + (col* size);
+    //     //             MapOfBinsToProcs[ProcNum].push_back(BlockNum); 
+    //     //         } 
+    //     //     }
+
+    //     // } //  for(int ProcNum = 0; ProcNum < NumberofProcessors; NumberofProcessors++;)
+
+    //     // do bottom 
+
+
+    //     //divide each set of bins by LogOfProcs -1
+    //     // same algorithm as above. 
+ 
+    // }
+
+    return MapOfBinsToProcs;
 }
 
 // bins will not not move. Once set, their location is static 
@@ -396,6 +525,7 @@ int MapBinToProc(int Bin, int NumberofProcessors)
     return Processor;
 
 }
+
 
 int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
 {
