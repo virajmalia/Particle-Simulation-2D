@@ -61,6 +61,28 @@ typedef struct Local_Space
 	double Floor; 
 
 } Local_Space_t;
+
+typedef struct 
+{
+	bool Left;
+	bool Right;
+	bool Top;
+	bool Bottom;
+} Bin_Location_t; 
+
+typedef struct 
+{
+	int North;
+	int NorthEast;
+	int NorthWest;
+	int East;
+	int West;
+	int South;
+	int SouthEast;
+	int SouthWest;
+} Neighbor_Indexes_t;
+
+
 //
 //  timing routines
 //
@@ -79,7 +101,10 @@ void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg
 void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg);
 void move( particle_t &p );
 void move_SOA( particle_SOA_t &p,int I);
+Bin_Location_t GetBinLocation(const int BinIndex, const int NumofBinsEachSide,const int NumofBins );
+Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBinsEachSide);
 
+Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex);
 int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
 int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int rank, int NumberofProcessors);
 
@@ -90,12 +115,12 @@ std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumo
 std::vector<particle_t> getGhostParticlesBottom(const int rank, const int LocalNumofBinsEachSide, const int NumberoflocalBins, const int NumberofProcessors, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec);
 
 std::vector<int> getBoarderPeers(int rank, int NumberofProcessors);
-
 int MaplocalBinToGlobalBin(int rank, int localbinNumber, int NumberOfBinsperSide,int NumberofProcessors);
 int MapGlobalBinToLocalBin(int rank, int GlobalBinNumber, int NumberOfBinsperSide,int NumberofProcessors);
 int MapBinToProc(int Bin, int NumberOfProcs);
 int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide);
 int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors );
+
 
 //
 //  I/O routines

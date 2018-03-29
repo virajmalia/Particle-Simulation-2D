@@ -157,7 +157,7 @@ int main( int argc, char **argv )
 
 
         // store the particle indices from each surrounding bin.
-        std::vector<int> BinMembers;
+                std::vector<int> BinMembers;
 
         // for each bin apply forces from particles within the cutoff distance.
         //for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
@@ -174,146 +174,129 @@ int main( int argc, char **argv )
             //printf("Bin number %d \n",BinIndex );
             //printf("#########################################################\n");
             /////////CHECKED !!!
-            //determine if the bin is in the four courners or edges.
-            bool Left = ((BinIndex%NumofBinsEachSide) == 0) ? true : false;
-            bool Right = ((BinIndex%NumofBinsEachSide) == (NumofBinsEachSide-1) ) ? true : false;
-            bool Top =  ((BinIndex < NumofBinsEachSide) )? true : false;
-            bool Bottom = ((BinIndex > (NumofBins - NumofBinsEachSide - 1) ) )? true : false;
+
+            Bin_Location_t Location =  GetBinLocation(BinIndex,NumofBinsEachSide,NumofBins );
 
             //printf("BinIndex %d Left %d Right %d Top %d Bottom %d\n",BinIndex,Left,Right,Top,Bottom);
 
-            ///////////CHECKED
-            // calculate the indexes of surrounding bins.
-            /// <<West    North ^  East >>
-            int North = BinIndex - NumofBinsEachSide;
-            int NorthEast = North + 1;
-            int NorthWest = North -1;
-            int East = BinIndex + 1;
-            int West = BinIndex -1;
-            int South = BinIndex + NumofBinsEachSide;
-            int SouthEast = South +1;
-            int SouthWest = South -1;
+            Neighbor_Indexes_t NeighborIndex = GetNeighborBinIndexes(BinIndex,NumofBinsEachSide);
 
             //printf(" BinIndex %d North %d NorthEast %d NorthWest %d, East %d, West %d, South %d, SouthEast %d, SouthWest %d\n",BinIndex, North,NorthEast,NorthWest,East, West,South, SouthEast,SouthWest  );
-
-            // Note: Left = West
-            // Right = East
-
             /// NOW! Take all the particles in each of the bins and apply forces across all 9 bins.
             // We are always going to apply forces within a bin we are in
             //BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
 
 
             // we are not at an edge or a corner. -- Most common case
-            if( (Left | Right | Top | Bottom) == false)
+            if( (Location.Left | Location.Right | Location.Top | Location.Bottom) == false)
             {
                 ///////////////// CHECKED
                 //printf("ALL %d \n", BinIndex );
                 //NumofPeerBins = 8;
                 //N NE NW E W S SE SW
                 //printf("Test1 %d ", BinIndex);
-                BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
                 // printf("Test2");
-                BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
                 // printf("Test3");
-                BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
                 // printf("Test4");
-                BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
                 // printf("Test5");
-                BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
                 // printf("Test6");
-                BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin() ,Bins[SouthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin() ,Bins[NeighborIndex.SouthWest].end());
                 //printf("Test7");
-                BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
                 //printf("Test8");
-                BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
                 //printVector(BinMembers);
                 //printf("Testlast");
             }
             //printf("After");
             // Top Row
-            else if( Top )
+            else if( Location.Top )
             {
                 // most common case for the top row -- Not in a corner.
-                if( (Left | Right) == false)
+                if( (Location.Left | Location.Right) == false)
                 {
                     //printf("Top Row %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-                    BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-                    BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
                     //printVector(BinMembers);
                 }
-                else if( (!Left) && Right ) // Yes this would be called a corner case!!!
+                else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
                 {
                     //printf("Top Row Right %d \n", BinIndex );
                     // Right == East
-                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-                    BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
                     //printVector(BinMembers);
                 }
-                else if ( Left && (!Right) )// left corner
+                else if ( Location.Left && (!Location.Right) )// left corner
                 {
                     //printf("Top Row Left %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-                    BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-                    BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
                     //printVector(BinMembers);
                 }
 
             }
-            else if( Bottom )
+            else if( Location.Bottom )
             {
                 // most common case for the top row -- Not in a corner.
-                if((Left | Right) == false)
+                if((Location.Left | Location.Right) == false)
                 {
                     //printf("Bottom Row %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
-                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
                     //printVector(BinMembers);
                 }
-                else if( (!Left) && Right ) // Yes this would be called a corner case!!!
+                else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
                 {
                     // Right == East
                     //printf("Bottom Row Right %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-                    BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
                     //printVector(BinMembers);
                 }
-                else if( Left && (!Right) )// left corner
+                else if( Location.Left && (!Location.Right) )// left corner
                 {
                     //printf("Bottom Row Left %d ", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
-                    BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
+                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
                     //printVector(BinMembers);
                 }
 
             }
-            else if(Left)  // not in a corner on the left side
+            else if(Location.Left)  // not in a corner on the left side
             {
                 //printf("Left %d \n", BinIndex );
-                BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-                BinMembers.insert(BinMembers.end(),Bins[NorthEast].begin(),Bins[NorthEast].end());
-                BinMembers.insert(BinMembers.end(),Bins[East].begin(),Bins[East].end());
-                BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
-                BinMembers.insert(BinMembers.end(),Bins[SouthEast].begin(),Bins[SouthEast].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
                 //printVector(BinMembers);
             }
-            else if(Right) // must be the right side
+            else if(Location.Right) // must be the right side
             {
                 //printf("Right %d \n", BinIndex );
-                BinMembers.insert(BinMembers.end(),Bins[NorthWest].begin(),Bins[NorthWest].end());
-                BinMembers.insert(BinMembers.end(),Bins[North].begin(),Bins[North].end());
-                BinMembers.insert(BinMembers.end(),Bins[West].begin(),Bins[West].end());
-                BinMembers.insert(BinMembers.end(),Bins[SouthWest].begin(),Bins[SouthWest].end());
-                BinMembers.insert(BinMembers.end(),Bins[South].begin(),Bins[South].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
+                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
                 //printVector(BinMembers);
             }
             else
@@ -368,6 +351,7 @@ int main( int argc, char **argv )
     } // end of bin calcs
 
     BinsWithParticles.clear();
+
 
         //
         //  move particles

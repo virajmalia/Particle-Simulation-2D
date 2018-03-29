@@ -295,9 +295,57 @@ void move_SOA( particle_SOA_t &p,int I)
 
 }
 
+Bin_Location_t GetBinLocation(const int BinIndex, const int NumofBinsEachSide,const int NumofBins )
+{
+
+    Bin_Location_t Temp; 
+
+    Temp.Left = ((BinIndex%NumofBinsEachSide) == 0) ? true : false;
+    Temp.Right = ((BinIndex%NumofBinsEachSide) == (NumofBinsEachSide-1) ) ? true : false;
+    Temp.Top =  ((BinIndex < NumofBinsEachSide) )? true : false;
+    Temp.Bottom = ((BinIndex > (NumofBins - NumofBinsEachSide - 1) ) )? true : false;
+
+    return Temp; 
+}
+
+Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBinsEachSide)
+{
+    Neighbor_Indexes_t Temp;
+
+        Temp.North = BinIndex - NumofBinsEachSide;
+        Temp.NorthEast = Temp.North + 1;
+        Temp.NorthWest = Temp.North -1;
+        Temp.East = BinIndex + 1;
+        Temp.West = BinIndex -1;
+        Temp.South = BinIndex + NumofBinsEachSide;
+        Temp.SouthEast = Temp.South +1;
+        Temp.SouthWest = Temp.South -1;
+
+    return Temp; 
+};
+
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////// MPI /////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex)
+{// assumes only the top or bottom row!
+    Neighbor_Indexes_t Temp;
+        // use for top host row
+        Temp.North = BinIndex;
+        Temp.NorthEast = Temp.North + 1;
+        Temp.NorthWest = Temp.North -1;
+        Temp.East = -1;
+        Temp.West = -1;
+        // use for bottom  ghost row 
+        Temp.South = BinIndex;
+        Temp.SouthEast = Temp.South +1;
+        Temp.SouthWest = Temp.South -1;
+
+    return Temp; 
+}
 
 
 /// warning !! dependent on row divion!. Blocking to come later 
