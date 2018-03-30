@@ -567,13 +567,13 @@ std::vector< std::vector<int> > PopulateProcBinVector(int NumberOfBinsperSide,in
 }
 
 // bins will not not move. Once set, their location is static 
-int MapBinToProc(int Bin, int NumberofProcessors)
+int MapBinToProc(const int GlobalBin, const int NumberofProcessors, const int NumberOfBinsperSide)
 { // untested this needs to be figured out
-    int Processor = 0; 
-    return Processor;
 
+    int RowsPerProc = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); 
+
+    return floor(GlobalBin / (NumberOfBinsperSide * RowsPerProc) ); // assuming localbins are the same lenght as the global bins. 
 }
-
 
 int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
 {
@@ -595,7 +595,7 @@ int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
 int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors )
 {   // this will retun the processor to which a given particle belongs. 
     int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
-    return MapBinToProc(BinNum,NumberofProcessors);
+    return MapBinToProc(BinNum,NumberofProcessors,NumofBinsEachSide);
 }
 // int getProcessorForBin(int Bin)
 // {

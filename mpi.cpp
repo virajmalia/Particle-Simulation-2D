@@ -124,6 +124,8 @@ int main(int argc, char **argv)
 
     std::vector< std::vector<int> > Bins(LocalNumberofBins, std::vector<int>(0));
 
+
+    // for ghost particles. 
     std::vector <particle_t> GhostParticleTopVector;
     std::vector <particle_t> GhostParticleBottomVector;
 
@@ -454,7 +456,7 @@ int main(int argc, char **argv)
                     int Index = Bins[BinIndex][GhostTopBin];
                     // particles[Index].ax = particles[Index].ay = 0;
 
-                    for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
+                    for (int calcForceindexJ = 0; calcForceindexJ < TopGhostBinMembers.size(); calcForceindexJ++ )
                     {
 
                         apply_force( particles[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
@@ -472,7 +474,7 @@ int main(int argc, char **argv)
                     int Index = Bins[BinIndex][GhostBottomBin];
                     // particles[Index].ax = particles[Index].ay = 0;
 
-                    for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
+                    for (int calcForceindexJ = 0; calcForceindexJ < BottomGhostBinMembers.size(); calcForceindexJ++ )
                     {
                        
                         apply_force( particles[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
@@ -481,8 +483,6 @@ int main(int argc, char **argv)
 
                 }
             }
-
-
 
             BinMembers.clear();
 
@@ -626,51 +626,57 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
 
 
     //int *partition_offsets = (int*) malloc( (n_proc+1) * sizeof(int) );
-    std::vector<int> partition_offsets(NumberofProcessors);
-    
+    //std::vector<int> partition_offsets(NumberofProcessors);
+    int partition_offsets[NumberofProcessors];
     //int *partition_sizes = (int*) malloc( NumberofProcessors * sizeof(int) );
-    
-    std::vector<int> partition_sizes(NumberofProcessors);
+    int partition_sizes[NumberofProcessors];
+    //std::vector<int> partition_sizes(NumberofProcessors);
     
 
     std::vector< std::vector<particle_t> > ParticlesPerProcecesor(NumberofProcessors,std::vector<particle_t>() );
+    std::vector<particle_t>  particlesassignedtoproc;
 
     if(rank == 0) // only the master node should do this 
     {   //sort the particles based on the bin location 
         //returns a proc number 
         for(int particleIndex = 0; particleIndex < NumofParticles; particleIndex++)
         {
+
             int ProcNumber = MapParticleToProc(particles[particleIndex],NumofBinsEachSide,NumberofProcessors);
             ParticlesPerProcecesor[ProcNumber].push_back(particles[particleIndex]); // add the the vector at each index
-
+            //printf("Particle assigned to procnum %d\n",ProcNumber );
         }
 
-    }
+        // append all the particles to particlesassignedtoproc 0 to NumberofProcessors
+        int ProcNumCount = 0;
+        int runningoffset = 0;
 
-    std::vector<particle_t>  particlesassignedtoproc;
-
-    // append all the particles to particlesassignedtoproc 0 to NumberofProcessors
-    int ProcNumCount = 0;
-    int runningoffset = 0;
-
-    for(auto ParticleVector : ParticlesPerProcecesor)
-    {
-        particlesassignedtoproc.insert(particlesassignedtoproc.end(),ParticleVector.begin(),ParticleVector.end());
-        partition_sizes[ProcNumCount] = ParticleVector.size();
-        partition_offsets[ProcNumCount] = runningoffset; 
-        runningoffset += ParticleVector.size();
-        ProcNumCount +=1; 
+        for(auto ParticleVector : ParticlesPerProcecesor)
+        {
+            //printf("Particle Array for procnum %d\n",ProcNumCount);
+            particlesassignedtoproc.insert(particlesassignedtoproc.end(),ParticleVector.begin(),ParticleVector.end());
+            partition_sizes[ProcNumCount] = ParticleVector.size();
+            partition_offsets[ProcNumCount] = runningoffset; 
+            runningoffset += ParticleVector.size();
+            ProcNumCount +=1; 
+        }
     }
 
     //nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
 
+    /// THIS IS REQUIRED TO MAKE SCATTERV WORK!! SINCE THE OFFSETS ARE CALCULATED BY RANK 0. ScatterV does not send the partion sizes or offsets to the other processors. 
+    MPI_Bcast(&partition_offsets, NumberofProcessors, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&partition_sizes, NumberofProcessors, MPI_INT, 0, MPI_COMM_WORLD);
+
     int nlocal = partition_sizes[rank];
-    
     particle_t * local = (particle_t*) malloc( nlocal * sizeof(particle_t) );
-    
+
+    // only process 0 will get the correct number :(
+    printf("Rank: %d Will get %d particles with an offset of %d\n",rank, partition_sizes[rank],partition_offsets[rank]);
+
 
     // scatter the particles to the processors. More scattered than the programmer's brain. 
-    MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes.data(), partition_offsets.data(), PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
+    MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
 
     // printf("nlocal is %d \n", nlocal);
     // printf("local is %d \n", local);
@@ -710,7 +716,7 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
             }
             else
             {
-                printf("We have a bug in the send of GhostParticles");
+                printf("We have a bug in the send of GhostParticles Peer: %d Rank %d\n", Peer, rank);
             }
 
             if(OutgoingParticles[Peer].empty() == false) 
@@ -770,7 +776,7 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
         }
         else
         {
-            printf("There is a bug in GhostParticles()!");
+            printf("There is a bug in GhostParticles()! Peer: %d rank %d\n", Peer, rank);
         }
 
         // add total to the local count 
@@ -798,8 +804,10 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
 
         move( localparticleVector[i]);
         //this is the global n=bin number
-        int BinNum = MapParticleToBin(localparticleVector[i],NumofBinsEachSide);
-        int procNum = MapBinToProc(BinNum,NumberofProcessors);
+        // int BinNum = MapParticleToBin(localparticleVector[i],NumofBinsEachSide);
+        // int procNum = MapBinToProc(BinNum,NumberofProcessors);
+        int procNum = MapParticleToProc(localparticleVector[i],NumofBinsEachSide,NumberofProcessors);
+
         if(procNum != rank)
         { // populate the list of outgoing particles 
             OutgoingParticles[procNum].push_back(localparticleVector[i]);
