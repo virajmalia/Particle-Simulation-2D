@@ -412,7 +412,7 @@ std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumo
     // int bottonright = std::max_element(BinsByProc[rank]);
     std::vector<particle_t> GhostParticlesTop;
 
-    if( (rank < 0 ) )  // if rank 0 and numprocessors is 1 we don't have any peers
+    if( (rank > 0 ) )  // if rank 0 and numprocessors is 1 we don't have any peers
     {
         for(int BinNum = 0; BinNum < LocalNumofBinsEachSide; BinNum++) 
         {

@@ -117,7 +117,7 @@ std::vector<particle_t> getGhostParticlesBottom(const int rank, const int LocalN
 std::vector<int> getBoarderPeers(int rank, int NumberofProcessors);
 int MaplocalBinToGlobalBin(int rank, int localbinNumber, int NumberOfBinsperSide,int NumberofProcessors);
 int MapGlobalBinToLocalBin(int rank, int GlobalBinNumber, int NumberOfBinsperSide,int NumberofProcessors);
-int MapBinToProc(int Bin, int NumberOfProcs);
+int MapBinToProc(const int GlobalBin, const int NumberofProcessors, const int NumberOfBinsperSide);
 int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide);
 int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors );
 

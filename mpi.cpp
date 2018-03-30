@@ -699,11 +699,12 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
     // since we can't request the particle it make more sense for each processor to send them to it's peers. 
     std::vector<int> BoarderPeers = getBoarderPeers(rank,NumberofProcessors);
     // Send border particles to neighbors
+    printf("We are rank: %d with %d peers\n", rank,BoarderPeers.size());
 
-    std::vector< std::vector<particle_t> > OutgoingParticles(BoarderPeers.size(),std::vector<particle_t>() );
+    std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
 
 
-    for (int Peer = 0; Peer < BoarderPeers.size(); Peer++)
+    for (auto Peer : BoarderPeers) // believe it or not the auto prevents an unnedded temp object. 
     {
 
             if(Peer < rank)
@@ -721,12 +722,14 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
 
             if(OutgoingParticles[Peer].empty() == false) 
             {
+                printf("Sending out particles: %d Rank %d to Peer %d\n", OutgoingParticles[Peer].size(), rank, Peer);
                 MPI_Request request;
-                MPI_Ibsend(&OutgoingParticles[Peer][0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
+                MPI_Ibsend(&OutgoingParticles[Peer].data()[0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
                 MPI_Request_free(&request);
             }
             else // we need to send a message to unblock the recv on other processors. 
             {
+                printf("NOT! Sending out particles: %d Rank %d to Peer %d\n", OutgoingParticles[Peer].size(), rank, Peer);
                 MPI_Request request;
                 MPI_Ibsend(0, 0, PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
                 MPI_Request_free(&request);
