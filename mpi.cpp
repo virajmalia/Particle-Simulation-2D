@@ -8,6 +8,8 @@
 #include <set>
 //#include "mpi_tools.h"
 
+//#define DEBUG 
+
 MPI_Datatype PARTICLE;
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank);
 void GhostParticles(const int rank,const int n,const int NumberofProcessors, const int NumberoflocalBins, const int LocalNumofBinsEachSide, std::vector <particle_t> & GhostParticleTopVector,std::vector <particle_t> & GhostParticleBottomVector, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec);
@@ -45,15 +47,20 @@ int main(int argc, char **argv)
     set_size( n );
     
     //
-    //  set up MPI
+    //  set up MPIS
     //
     int n_proc, rank;
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 
+    // apparently needed for Ibsend but yet the documentation never points this out. 
+    // int BufferSize = n * sizeof(particle_t);
+    // particle_t buf[BufferSize];
+    // MPI_Buffer_attach( buf, BufferSize);
+    #ifdef DEBUG
     printf(" We are rank %d running with %d processors\n",rank, n_proc );
-    
+    #endif
     //
     //  allocate generic resources
     //
@@ -112,7 +119,9 @@ int main(int argc, char **argv)
     // send the assign the particles to each procssor based on which bin they are located in. local particles will be populated from this array. 
     std::vector <particle_t> localParticleVector = ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank); // bug in this function!
 
+    #ifdef DEBUG
     printf("ParticleVector is %d\n", localParticleVector.size());
+    #endif
     //MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  // probaly going to have to change this as well 
@@ -672,8 +681,9 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
     particle_t * local = (particle_t*) malloc( nlocal * sizeof(particle_t) );
 
     // only process 0 will get the correct number :(
+    #ifdef DEBUG
     printf("Rank: %d Will get %d particles with an offset of %d\n",rank, partition_sizes[rank],partition_offsets[rank]);
-
+    #endif
 
     // scatter the particles to the processors. More scattered than the programmer's brain. 
     MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
@@ -699,7 +709,9 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
     // since we can't request the particle it make more sense for each processor to send them to it's peers. 
     std::vector<int> BoarderPeers = getBoarderPeers(rank,NumberofProcessors);
     // Send border particles to neighbors
+    #ifdef DEBUG
     printf("We are rank: %d with %d peers\n", rank,BoarderPeers.size());
+    #endif
 
     std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
 
@@ -717,26 +729,20 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
             }
             else
             {
+            #ifdef DEBUG
                 printf("We have a bug in the send of GhostParticles Peer: %d Rank %d\n", Peer, rank);
+            #endif
             }
 
-            if(OutgoingParticles[Peer].empty() == false) 
-            {
+            // if(OutgoingParticles[Peer].empty() == false) 
+            // {
+            #ifdef DEBUG
                 printf("Sending out particles: %d Rank %d to Peer %d\n", OutgoingParticles[Peer].size(), rank, Peer);
+            #endif
                 MPI_Request request;
-                MPI_Ibsend(&OutgoingParticles[Peer].data()[0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
+                //MPI_Ibsend(&OutgoingParticles[Peer].data()[0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
+                MPI_Isend(&OutgoingParticles[Peer][0],OutgoingParticles[Peer].size(),PARTICLE,Peer,1,MPI_COMM_WORLD,&request);
                 MPI_Request_free(&request);
-            }
-            else // we need to send a message to unblock the recv on other processors. 
-            {
-                printf("NOT! Sending out particles: %d Rank %d to Peer %d\n", OutgoingParticles[Peer].size(), rank, Peer);
-                MPI_Request request;
-                MPI_Ibsend(0, 0, PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
-                MPI_Request_free(&request);
-            }
-
-        // reset the outgoing buffer. 
-        //OutgoingParticles[procNum].clear();
     }
 
     // same code as Move particles recv
@@ -753,7 +759,8 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
         int RecvCount = 0;
         MPI_Status status;
         //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
-        MPI_Recv(GhostParticleRecvBuffer, n, PARTICLE, Peer, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(GhostParticleRecvBuffer, n, PARTICLE, Peer, 1, MPI_COMM_WORLD, &status);
+        //MPI_Irecv(GhostParticleRecvBuffer,n,PARTICLE,Peer,0,MPI_COMM_WORLD,&status);
         
         // get the number of particles we have revieved 
         MPI_Get_count(&status, PARTICLE, &RecvCount);
@@ -779,7 +786,10 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
         }
         else
         {
+
+        #ifdef DEBUG
             printf("There is a bug in GhostParticles()! Peer: %d rank %d\n", Peer, rank);
+        #endif
         }
 
         // add total to the local count 
@@ -834,18 +844,12 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
     {
         if(ProcId != rank) // we are not sending particles to ourself. This rank's outgoing vector should be empty but, oh well 
         {
-            if(OutgoingParticles[ProcId].empty() == false) 
-            {
+            #ifdef DEBUG
+                printf("%d Particles moved from Rank %d to Peer %d\n", OutgoingParticles[ProcId].size(), rank, ProcId);
+            #endif
                 MPI_Request request;
-                MPI_Ibsend(&OutgoingParticles[ProcId][0], OutgoingParticles[ProcId].size(), PARTICLE, ProcId, 0, MPI_COMM_WORLD, &request);
+                MPI_Isend(&OutgoingParticles[ProcId][0], OutgoingParticles[ProcId].size(), PARTICLE, ProcId, 0, MPI_COMM_WORLD, &request);
                 MPI_Request_free(&request);
-            }
-            else // we need to send a message to unblock the recv on other processors. 
-            {
-                MPI_Request request;
-                MPI_Ibsend(0, 0, PARTICLE, ProcId, 0, MPI_COMM_WORLD, &request);
-                MPI_Request_free(&request);
-            }
 
         }
         // reset the outgoing buffer. 
@@ -862,8 +866,9 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
                 // recieve boarder 
             int RecvCount = 0;
             MPI_Status status;
-
+        #ifdef DEBUG
             printf("Waiting for a message from rank %d \n",ProcIdRecv);
+        #endif
             //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
             MPI_Recv(MovedParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 0, MPI_COMM_WORLD, &status);
             
@@ -878,7 +883,6 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
                 //MapParticleToBin(MovedParticleRecvBuffer[i], NumofBinsEachSide)
             }
             // add total to the local count 
-            //*nlocal += RecvCount;
         }
         
     }
