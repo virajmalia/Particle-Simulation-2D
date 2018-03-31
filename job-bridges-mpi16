@@ -3,7 +3,7 @@
 #SBATCH -J particle-mpi16
 #SBATCH -o particle-mpi16.stdout
 #SBATCH -N 1 
-#SBATCH -n 16         
+#SBATCH -n 4         
 #SBATCH -p RM
 #SBATCH -t 00:10:00     
-srun -n 16 ./mpi -n 1000 -o mpi.txt
+srun -n 4 ./mpi -n 1000 -o mpi.txt

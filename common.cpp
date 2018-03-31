@@ -6,9 +6,9 @@
 #include <math.h>
 #include <time.h>
 #include <sys/time.h>
+
 #include "common.h"
 #include "param.h"
-#include <immintrin.h>
 
 double size;
 
@@ -35,6 +35,22 @@ double read_timer( )
 void set_size( int n )
 {
     size = sqrt( density * n );
+}
+
+int getbinNumber()
+{
+    // need to round up for partial bins
+    return (int)ceil( size/cutoff );
+}
+
+double getSize()
+{
+    return size;
+}
+
+double getBinSize()
+{
+    return cutoff;
 }
 
 //
@@ -124,6 +140,7 @@ void init_particles_SOA( int n, particle_SOA_t *p )
     free( shuffle );
 }
 
+/*
 //
 //  interact two particles
 //
@@ -159,6 +176,7 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
     particle.ax += coef * dx;
     particle.ay += coef * dy;
 }
+*/
 
 //
 //  integrate the ODE
@@ -173,6 +191,10 @@ void move( particle_t &p )
     p.vy += p.ay * dt;
     p.x  += p.vx * dt;
     p.y  += p.vy * dt;
+
+    // once the force is applied awesome the accel is zero.
+    p.ax = 0;
+    p.ay = 0;
 
     //
     //  bounce from walls
