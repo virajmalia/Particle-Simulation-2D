@@ -200,7 +200,7 @@ int main( int argc, char **argv )
 
             /// NOW! Take all the particles in each of the bins and apply forces across all 9 bins.
             // We are always going to apply forces within a bin we are in
-            //BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
+            BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
 
 
             // we are not at an edge or a corner. -- Most common case
@@ -320,23 +320,25 @@ int main( int argc, char **argv )
               printf("Getting another bin case\n");
             }
 
-           for(int Inside_Bin = 0; Inside_Bin < Bins[BinIndex].size(); Inside_Bin++)
-            {
-                int Index = Bins[BinIndex][Inside_Bin];
-                // particles[Index].ax = particles[Index].ay = 0;
+           //#pragma omp for reduction (+:navg) reduction(+:davg) schedule(static) 
+           // for(int Inside_Bin = 0; Inside_Bin < Bins[BinIndex].size(); Inside_Bin++)
+           //  {
+           //      int Index = Bins[BinIndex][Inside_Bin];
+           //      // particles[Index].ax = particles[Index].ay = 0;
 
-                for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
-                {
-                    int Index2 = Bins[BinIndex][Inside_BinJ];
+           //      for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
+           //      {
+           //          int Index2 = Bins[BinIndex][Inside_BinJ];
                     
-                    apply_force( particles[Index], particles[Index2], &dmin, &davg, &navg);
-                    //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
-                }
+           //          apply_force( particles[Index], particles[Index2], &dmin, &davg, &navg);
+           //          //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
+           //      }
 
-            }
+           //  }
 
             //printf(" There will be %d x %d interactions\n",Bins[BinIndex].size(), BinMembers.size());
             // force to neighbors
+
             for(int calcForceindexI = 0; calcForceindexI < Bins[BinIndex].size(); calcForceindexI++ )
             {
                 // apply forces
