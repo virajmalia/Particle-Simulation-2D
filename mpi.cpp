@@ -9,7 +9,7 @@
 //#include "mpi_tools.h"
 
 #define DEBUG 
-//#define DEBUG2
+#define DEBUG2
 //#define DEBUG3
 
 MPI_Datatype PARTICLE;
@@ -55,6 +55,11 @@ int main(int argc, char **argv)
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+
+
+    /// BUG WORKAROUND !!!!! PROGRAM WILL CRASH SCATTERV AT CERTAIN values of n  
+    /// SEE https://software.intel.com/en-us/mpi-developer-reference-linux-shared-memory-control
+    setenv("I_MPI_SHM_LMT","shm",1);
 
     #ifdef DEBUG2
     printf("Rank %d Entering %s:%d\n",rank,__func__,__LINE__);
@@ -728,8 +733,6 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
         }
     }
 
-    //nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
-
     // THIS IS REQUIRED TO MAKE SCATTERV WORK!! SINCE THE OFFSETS ARE CALCULATED BY RANK 0. ScatterV does not send the partion sizes or offsets to the other processors. 
     MPI_Bcast(&partition_offsets, NumberofProcessors, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&partition_sizes, NumberofProcessors, MPI_INT, 0, MPI_COMM_WORLD);
@@ -741,10 +744,6 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
     #ifdef DEBUG
     printf("Rank: %d Will get %d particles with an offset of %d Particles assigned %d of %d \n",rank, partition_sizes[rank],partition_offsets[rank],particlesassignedtoproc.size(),NumofParticles);
     #endif
-
-    // #ifdef DEBUG
-    // printf("Rank: %d Will get %d particles \n",rank, ParticlesPerProcecesor[rank].size());
-    // #endif
 
     // scatter the particles to the processors. More scattered than the programmer's brain. 
     MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
