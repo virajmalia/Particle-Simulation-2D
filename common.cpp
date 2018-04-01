@@ -302,7 +302,7 @@ void move_SOA( particle_SOA_t &p,int I)
 }
 
 Bin_Location_t GetBinLocation(const int BinIndex, const int NumofBinsEachSide,const int NumofBins )
-{
+{ // assumes square geomerty!
 
     Bin_Location_t Temp; 
 
@@ -335,6 +335,18 @@ Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBins
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////// MPI /////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Bin_Location_t GetBinLocationMPI(const int BinIndex, const int NumofBinsEachSide,const int NumofBins )
+{
+
+    Bin_Location_t Temp; 
+
+    Temp.Left = ((BinIndex%NumofBinsEachSide) == 0) ? true : false;
+    Temp.Right = ((BinIndex%NumofBinsEachSide) == (NumofBinsEachSide-1) ) ? true : false;
+    Temp.Top =  ((BinIndex < NumofBinsEachSide) )? true : false;
+    Temp.Bottom = ((BinIndex > (NumofBins - NumofBinsEachSide - 1) ) )? true : false;
+
+    return Temp; 
+}
 
 Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex)
 {// assumes only the top or bottom row!
@@ -362,18 +374,20 @@ int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors)
 }
 
 
-int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int rank, int NumberofProcessors)
+int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int NumofBins, int rank, int NumberofProcessors)
 {
     // this is for Rank 0 to NumberofProcessors -1. The last Proc gets the remainder 
     int RowEachProc = getRowsPerProc(GlobalNumberOfBinsEachSide, NumberofProcessors);
 
-    if((rank < NumberofProcessors -1) || (rank == 0))
+    if((rank < (NumberofProcessors -1)) || (rank == 0))
     {
         return GlobalNumberOfBinsEachSide * RowEachProc;
     }
     else
     {   // the last proc takes care of the remainder 
-        return (GlobalNumberOfBinsEachSide % RowEachProc) * GlobalNumberOfBinsEachSide;
+
+        return (NumofBins) - ( (NumberofProcessors -1)  * GlobalNumberOfBinsEachSide * RowEachProc );
+        //return (GlobalNumberOfBinsEachSide % RowEachProc) * GlobalNumberOfBinsEachSide;
     }
 
 

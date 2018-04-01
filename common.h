@@ -106,7 +106,7 @@ Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBins
 
 Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex);
 int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
-int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int rank, int NumberofProcessors);
+int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int NumofBins, int rank, int NumberofProcessors);
 
 void set_local_space(double size, int rank, int GlobalNumberOfBinsEachSide, int NumberofProcessors);
 double getLocalYSize();

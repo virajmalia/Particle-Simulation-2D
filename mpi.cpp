@@ -9,8 +9,8 @@
 //#include "mpi_tools.h"
 
 #define DEBUG 
-#define DEBUG2
-#define DEBUG3
+//#define DEBUG2
+//#define DEBUG3
 
 MPI_Datatype PARTICLE;
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank);
@@ -113,6 +113,10 @@ int main(int argc, char **argv)
     //int nlocal;
     //particle_t *local; //  = (particle_t*) malloc( nlocal * sizeof(particle_t) );
 
+    #ifdef DEBUG
+    printf("Rank: %d Total number of Global bins %d \n", rank, NumofBins);
+    #endif
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,7 +137,7 @@ int main(int argc, char **argv)
  // probaly going to have to change this as well 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    int LocalNumberofBins = getNumberofBinsLocal(NumofBinsEachSide, rank,n_proc);
+    int LocalNumberofBins = getNumberofBinsLocal(NumofBinsEachSide, NumofBins, rank,n_proc);
 
     #ifdef DEBUG
     printf("Rank: %d Has %d Num bins each side and a total of %d Bins\n", rank, NumofBinsEachSide,LocalNumberofBins);
@@ -173,33 +177,33 @@ int main(int argc, char **argv)
 
 
         std::set<int> BinsWithParticles;
-        for(int particleIndex = 0; particleIndex < localParticleVector.size(); ++particleIndex)
-        {
-            // CHECKED///////////////////////
-              double binsize = getBinSize();
-              //printf("Test4\n");
-              // get the bin index
+        // for(int particleIndex = 0; particleIndex < localParticleVector.size(); ++particleIndex)
+        // {
+        //     // CHECKED///////////////////////
+        //       double binsize = getBinSize();
+        //       //printf("Test4\n");
+        //       // get the bin index
 
-               int BinX = (int)(localParticleVector[particleIndex].x/binsize);
-               int BinY = (int)(localParticleVector[particleIndex].y/binsize);
-               // int BinX = (int)(particlesSOA->x[particle]/binsize);
-               // int BinY = (int)(particlesSOA->y[particle]/binsize);
-               //printf("Adding particle\n");
-               int GlobalBinNum = BinX + NumofBinsEachSide*BinY;
+        //        int BinX = (int)(localParticleVector[particleIndex].x/binsize);
+        //        int BinY = (int)(localParticleVector[particleIndex].y/binsize);
+        //        // int BinX = (int)(particlesSOA->x[particle]/binsize);
+        //        // int BinY = (int)(particlesSOA->y[particle]/binsize);
+        //        //printf("Adding particle\n");
+        //        int GlobalBinNum = BinX + NumofBinsEachSide*BinY;
 
 
-               int LocalBinNumber = MapGlobalBinToLocalBin(rank,GlobalBinNum,NumofBinsEachSide,n_proc);
+        //        int LocalBinNumber = MapGlobalBinToLocalBin(rank,GlobalBinNum,NumofBinsEachSide,n_proc);
 
-               //printf("Particle added to Bin %d", BinNum);
-               Bins[LocalBinNumber].push_back(particleIndex);
+        //        //printf("Particle added to Bin %d", BinNum);
+        //        Bins[LocalBinNumber].push_back(particleIndex);
 
-               // store the bin which contain a particle. We will ignore the empty ones
-               BinsWithParticles.insert(LocalBinNumber);
+        //        // store the bin which contain a particle. We will ignore the empty ones
+        //        BinsWithParticles.insert(LocalBinNumber);
 
-               //printf("P %d X: %f Y: %f BinNum: %d \n", particle,particles[particle].x, particles[particle].y,BinNum );
-               //printf("There are %d particles in bin %d\n",Bins[BinNum].size(),BinNum );
-        //     //addParticleToBin(n,BinX,BinY);
-        }
+        //        //printf("P %d X: %f Y: %f BinNum: %d \n", particle,particles[particle].x, particles[particle].y,BinNum );
+        //        //printf("There are %d particles in bin %d\n",Bins[BinNum].size(),BinNum );
+        // //     //addParticleToBin(n,BinX,BinY);
+        // }
         // //  collect all global data locally (not good idea to do)
         // //
         // MPI_Allgatherv( local, nlocal, PARTICLE, particles, partition_sizes, partition_offsets, PARTICLE, MPI_COMM_WORLD );
@@ -590,7 +594,7 @@ int main(int argc, char **argv)
           }
         }
 
-    MoveParticles(localParticleVector,rank, n, n_proc,NumofBinsEachSide);
+    //MoveParticles(localParticleVector,rank, n, n_proc,NumofBinsEachSide);
     //             //
     //     //  move particles
     //     //
@@ -693,7 +697,7 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
 
     if(rank == 0) // only the master node should do this 
     {   //sort the particles based on the bin location 
-        //returns a proc number 
+    //     //returns a proc number 
         for(int particleIndex = 0; particleIndex < NumofParticles; particleIndex++)
         {
 
@@ -726,7 +730,7 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
 
     //nlocal = (int *) malloc( NumberofProcessors * sizeof(int) );
 
-    /// THIS IS REQUIRED TO MAKE SCATTERV WORK!! SINCE THE OFFSETS ARE CALCULATED BY RANK 0. ScatterV does not send the partion sizes or offsets to the other processors. 
+    // THIS IS REQUIRED TO MAKE SCATTERV WORK!! SINCE THE OFFSETS ARE CALCULATED BY RANK 0. ScatterV does not send the partion sizes or offsets to the other processors. 
     MPI_Bcast(&partition_offsets, NumberofProcessors, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&partition_sizes, NumberofProcessors, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -735,8 +739,12 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
 
     // only process 0 will get the correct number :(
     #ifdef DEBUG
-    printf("Rank: %d Will get %d particles with an offset of %d\n",rank, partition_sizes[rank],partition_offsets[rank]);
+    printf("Rank: %d Will get %d particles with an offset of %d Particles assigned %d of %d \n",rank, partition_sizes[rank],partition_offsets[rank],particlesassignedtoproc.size(),NumofParticles);
     #endif
+
+    // #ifdef DEBUG
+    // printf("Rank: %d Will get %d particles \n",rank, ParticlesPerProcecesor[rank].size());
+    // #endif
 
     // scatter the particles to the processors. More scattered than the programmer's brain. 
     MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
@@ -744,8 +752,9 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
     // printf("nlocal is %d \n", nlocal);
     // printf("local is %d \n", local);
 
-    std::vector <particle_t> temp (local , local + nlocal);
+    std::vector <particle_t> temp(local , local + nlocal);
 
+                
     free(local);
 
     #ifdef DEBUG2
