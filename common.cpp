@@ -2,7 +2,6 @@
 #include "common.h"
 
 
-
 double size;
 
 Local_Space_t LocalSpaceInfo; 
@@ -237,18 +236,25 @@ void move( particle_t &p )
     //  slightly simplified Velocity Verlet integration
     //  conserves energy better than explicit Euler method
     //
+
+    //printf("Particle Vel is %f", p.vy);
     p.vx += p.ax * dt;
     p.vy += p.ay * dt;
     p.x  += p.vx * dt;
-    p.y  += p.vy * dt;
-
-    // once the force is applied awesome the accel is zero.
+    p.y  += p.vy * dt; // this line will crash the MPI program on odd values of n in of 2^n processors
+    // double temp = p.vy * dt;
+    // temp = temp + p.y;
+    // double temp2 = temp; 
+    // p.y = temp2;
+    //printf("Particle Y: %f Vel is %f",p.y , p.vy);
+    // // once the force is applied awesome the accel is zero.
     p.ax = 0;
     p.ay = 0;
 
-    //
-    //  bounce from walls
-    //
+
+    // //
+    // //  bounce from walls
+    // //
     while( p.x < 0 || p.x > size )
     {
         p.x  = p.x < 0 ? -p.x : 2*size-p.x;
@@ -414,8 +420,9 @@ std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumo
 
     if( (rank > 0 ) )  // if rank 0 and numprocessors is 1 we don't have any peers
     {
-        for(int BinNum = 0; BinNum < LocalNumofBinsEachSide; BinNum++) 
+        for(int BinNum = 0; BinNum < LocalBins.size(); BinNum++) 
         {
+            //printf("Local size is : %d, BinsEachSide is %d \n", LocalBins.size(),LocalNumofBinsEachSide );
             for(int Ghostparticle = 0; Ghostparticle < LocalBins[BinNum].size();Ghostparticle++)
             {
                  GhostParticlesTop.push_back(localParticleVec[ LocalBins[BinNum][Ghostparticle] ]);
@@ -434,7 +441,7 @@ std::vector<particle_t> getGhostParticlesBottom(const int rank, const int LocalN
 {
     std::vector<particle_t> GhostParticlesBottom;
 
-    if( (rank < (NumberofProcessors - 1) ) )  // if rank 0 and numprocessors is 1 we don't have any peers  // if rank 0 and numprocessors is 1 we don't have any peers
+    if( (rank < (NumberofProcessors - 1) ))  // if rank 0 and numprocessors is 1 we don't have any peers  // if rank 0 and numprocessors is 1 we don't have any peers
     {
         for(int BinNum = (NumberoflocalBins - LocalNumofBinsEachSide); BinNum < NumberoflocalBins; BinNum++) 
         {

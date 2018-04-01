@@ -8,7 +8,9 @@
 #include <set>
 //#include "mpi_tools.h"
 
-//#define DEBUG 
+#define DEBUG 
+#define DEBUG2
+#define DEBUG3
 
 MPI_Datatype PARTICLE;
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank);
@@ -53,6 +55,10 @@ int main(int argc, char **argv)
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+
+    #ifdef DEBUG2
+    printf("Rank %d Entering %s:%d\n",rank,__func__,__LINE__);
+    #endif
 
     // apparently needed for Ibsend but yet the documentation never points this out. 
     // int BufferSize = n * sizeof(particle_t);
@@ -119,16 +125,20 @@ int main(int argc, char **argv)
     // send the assign the particles to each procssor based on which bin they are located in. local particles will be populated from this array. 
     std::vector <particle_t> localParticleVector = ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank); // bug in this function!
 
-    #ifdef DEBUG
-    printf("ParticleVector is %d\n", localParticleVector.size());
-    #endif
+    // #ifdef DEBUG
+    // printf("ParticleVector is %d\n", localParticleVector.size());
+    // #endif
     //MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  // probaly going to have to change this as well 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     int LocalNumberofBins = getNumberofBinsLocal(NumofBinsEachSide, rank,n_proc);
-    
+
+    #ifdef DEBUG
+    printf("Rank: %d Has %d Num bins each side and a total of %d Bins\n", rank, NumofBinsEachSide,LocalNumberofBins);
+    #endif
+
     set_local_space(size, rank, NumofBinsEachSide, n_proc);
 
     std::vector< std::vector<int> > Bins(LocalNumberofBins, std::vector<int>(0));
@@ -196,24 +206,24 @@ int main(int argc, char **argv)
         
         // send out ghost particles to other processors // get ghost particles from other processors 
 
-        GhostParticles(rank,n,n_proc, LocalNumberofBins, NumofBinsEachSide,GhostParticleTopVector,GhostParticleBottomVector, Bins, localParticleVector);
+        //GhostParticles(rank,n,n_proc, LocalNumberofBins, NumofBinsEachSide,GhostParticleTopVector,GhostParticleBottomVector, Bins, localParticleVector);
 
         // ghost particle binning......
-        for( int TopGhostIndex = 0; TopGhostIndex < GhostParticleTopVector.size(); TopGhostIndex++ )
-        { // already sorted in the Y
-            double binsize = getBinSize();
-            int BinX = (int)(GhostParticleTopVector[TopGhostIndex].x/binsize);
-            GhostBinTop[BinX].push_back(BinX);
-        }
+        // for( int TopGhostIndex = 0; TopGhostIndex < GhostParticleTopVector.size(); TopGhostIndex++ )
+        // { // already sorted in the Y
+        //     double binsize = getBinSize();
+        //     int BinX = (int)(GhostParticleTopVector[TopGhostIndex].x/binsize);
+        //     GhostBinTop[BinX].push_back(BinX);
+        // }
 
-        for( int BottomGhostIndex = 0; BottomGhostIndex < GhostParticleBottomVector.size(); BottomGhostIndex++ )
-        {
-            double binsize = getBinSize();
-            int BinX = (int)(GhostParticleBottomVector[BottomGhostIndex].x/binsize);
-            GhostBinBottom[BinX].push_back(BinX);
-        }
+        // for( int BottomGhostIndex = 0; BottomGhostIndex < GhostParticleBottomVector.size(); BottomGhostIndex++ )
+        // {
+        //     double binsize = getBinSize();
+        //     int BinX = (int)(GhostParticleBottomVector[BottomGhostIndex].x/binsize);
+        //     GhostBinBottom[BinX].push_back(BinX);
+        // }
 
-        // store the particle indices from each surrounding bin.
+        // // store the particle indices from each surrounding bin.
         std::vector<int> BinMembers;
 
         // used for the ghost particles
@@ -222,8 +232,8 @@ int main(int argc, char **argv)
         std::vector<int> BottomGhostBinMembers;
 
 
-        // for each bin apply forces from particles within the cutoff distance.
-        //for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
+    //     // for each bin apply forces from particles within the cutoff distance.
+    //     //for(int BinIndex = 0; BinIndex < NumofBins; BinIndex++ )
         std::set<int>::iterator it;
         for( it = BinsWithParticles.begin(); it != BinsWithParticles.end(); it++ )
         {
@@ -251,247 +261,271 @@ int main(int argc, char **argv)
 
             /// NOW! Take all the particles in each of the bins and apply forces across all 9 bins.
             // We are always going to apply forces within a bin we are in
-            //BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
+            BinMembers.insert(BinMembers.end(),Bins[BinIndex].begin(),Bins[BinIndex].end());
 
 
             // we are not at an edge or a corner. -- Most common case
-            if( (Location.Left | Location.Right | Location.Top | Location.Bottom) == false)
-            {
-                ///////////////// CHECKED
-                //printf("ALL %d \n", BinIndex );
-                //NumofPeerBins = 8;
-                //N NE NW E W S SE SW
-                //printf("Test1 %d ", BinIndex);
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
-                // printf("Test2");
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
-                // printf("Test3");
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
-                // printf("Test4");
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
-                // printf("Test5");
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
-                // printf("Test6");
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin() ,Bins[NeighborIndex.SouthWest].end());
-                //printf("Test7");
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
-                //printf("Test8");
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
-                //printVector(BinMembers);
-                //printf("Testlast");
-            }
+            // if( (Location.Left | Location.Right | Location.Top | Location.Bottom) == false)
+            // {
+            //     ///////////////// CHECKED
+            //     //printf("ALL %d \n", BinIndex );
+            //     //NumofPeerBins = 8;
+            //     //N NE NW E W S SE SW
+            //     //printf("Test1 %d ", BinIndex);
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
+            //     // printf("Test2");
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+            //     // printf("Test3");
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
+            //     // printf("Test4");
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //     // printf("Test5");
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //     // printf("Test6");
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin() ,Bins[NeighborIndex.SouthWest].end());
+            //     //printf("Test7");
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+            //     //printf("Test8");
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
+            //     //printVector(BinMembers);
+            //     //printf("Testlast");
+            // }
             //printf("After");
             // Top Row
-            else if( Location.Top )
-            {
-                // most common case for the top row -- Not in a corner.
-                if( (Location.Left | Location.Right) == false)
-                {
-                    //printf("Top Row %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
-                    //printVector(BinMembers);
-                }
-                else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
-                {
-                    //printf("Top Row Right %d \n", BinIndex );
-                    // Right == East
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
-                    //printVector(BinMembers);
-                }
-                else if ( Location.Left && (!Location.Right) )// left corner
-                {
-                    //printf("Top Row Left %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
-                    //printVector(BinMembers);
-                }
+            // else if( Location.Top && Location.Bottom) // can happen with a single row 
+            // {
+            //     if( (Location.Left | Location.Right) == false)
+            //     {
+            //         //printf("Rank: %d Binindex %d Southwest %d Num of bins each side %d\n",rank, BinIndex,NeighborIndex.SouthWest, NumofBinsEachSide);
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //         //printVector(BinMembers);
+            //     }
+            //     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
+            //     {
+            //         //printf("Top Row Right %d \n", BinIndex );
+            //         // Right == East
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //         //printVector(BinMembers);
+            //     }
+            //     else if ( Location.Left && (!Location.Right) )// left corner
+            //     {
+            //         //printf("Top Row Left %d \n", BinIndex );
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //         //printVector(BinMembers);
+            //     }
+            // }
+            // else if( Location.Top && (!Location.Bottom))
+            // {
+            //     // most common case for the top row -- Not in a corner.
+            //     if( (Location.Left | Location.Right) == false)
+            //     {
+            //         //printf("Rank: %d Binindex %d Southwest %d Num of bins each side %d\n",rank, BinIndex,NeighborIndex.SouthWest, NumofBinsEachSide);
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
+            //         //printVector(BinMembers);
+            //     }
+            //     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
+            //     {
+            //         //printf("Top Row Right %d \n", BinIndex );
+            //         // Right == East
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+            //         //printVector(BinMembers);
+            //     }
+            //     else if ( Location.Left && (!Location.Right) )// left corner
+            //     {
+            //         //printf("Top Row Left %d \n", BinIndex );
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
+            //         //printVector(BinMembers);
+            //     }
 
-                ///////////////////////////////////////////////////////// MPI GHOST bins //////////////////////////////////////////////////////////
+            //     /////////////////////////////////////////////////////// MPI GHOST bins //////////////////////////////////////////////////////////
 
-                if(rank > 0) // we are not the top most space
-                {
-                    Neighbor_Indexes_t GhostTopIndex = GetGhostBinLocations(BinIndex);
-                    if( (Location.Left | Location.Right) == false)
-                    {
-                        TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
-                        TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
-                        TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
-                    }
-                    else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
-                    {
-                        TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
-                        TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
+            //     if(rank > 0) // we are not the top most space
+            //     {
+            //         Neighbor_Indexes_t GhostTopIndex = GetGhostBinLocations(BinIndex);
+            //         if( (Location.Left | Location.Right) == false)
+            //         {
+            //             TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
+            //             TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
+            //             TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
+            //         }
+            //         else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
+            //         {
+            //             TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
+            //             TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
 
-                    }
-                    else if ( Location.Left && (!Location.Right) )// left corner
-                    {
+            //         }
+            //         else if ( Location.Left && (!Location.Right) )// left corner
+            //         {
 
-                        TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
-                        TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
-                    }
+            //             TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
+            //             TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
+            //         }
                     
-                }
+            //     }
 
-            }
-            else if( Location.Bottom )
-            {
-                // most common case for the top row -- Not in a corner.
-                if((Location.Left | Location.Right) == false)
-                {
-                    //printf("Bottom Row %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
-                    //printVector(BinMembers);
-                }
-                else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
-                {
-                    // Right == East
-                    //printf("Bottom Row Right %d \n", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
-                    //printVector(BinMembers);
-                }
-                else if( Location.Left && (!Location.Right) )// left corner
-                {
-                    //printf("Bottom Row Left %d ", BinIndex );
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
-                    BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
-                    //printVector(BinMembers);
-                }
+            // }
+            // else if( Location.Bottom && (!Location.Top) )
+            // {
+            //     // most common case for the top row -- Not in a corner.
+            //     if((Location.Left | Location.Right) == false)
+            //     {
+            //         //printf("Bottom Row %d \n", BinIndex );
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //         //printVector(BinMembers);
+            //     }
+            //     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
+            //     {
+            //         // Right == East
+            //         //printf("Bottom Row Right %d \n", BinIndex );
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //         //printVector(BinMembers);
+            //     }
+            //     else if( Location.Left && (!Location.Right) )// left corner
+            //     {
+            //         //printf("Bottom Row Left %d ", BinIndex );
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
+            //         BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //         //printVector(BinMembers);
+            //     }
 
 
-                if(rank < (n_proc -1) ) // we are not the bottom most space
-                {
-                    Neighbor_Indexes_t GhostBottomIndex = GetGhostBinLocations(BinIndex);
-                    if( (Location.Left | Location.Right) == false)
-                    {
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
-                    }
-                    else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
-                    {
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.North].begin(),GhostBinBottom[GhostBottomIndex.North].end());
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
+            //     if(rank < (n_proc -1) ) // we are not the bottom most space
+            //     {
+            //         Neighbor_Indexes_t GhostBottomIndex = GetGhostBinLocations(BinIndex);
+            //         if( (Location.Left | Location.Right) == false)
+            //         {
+            //             BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
+            //             BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
+            //             BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
+            //         }
+            //         else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
+            //         {
+            //             BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.North].begin(),GhostBinBottom[GhostBottomIndex.North].end());
+            //             BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
 
-                    }
-                    else if ( Location.Left && (!Location.Right) )// left corner
-                    {
+            //         }
+            //         else if ( Location.Left && (!Location.Right) )// left corner
+            //         {
 
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
-                    }   
-                }
+            //             BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
+            //             BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
+            //         }   
+            //     }
 
-            }
-            else if(Location.Left)  // not in a corner on the left side
-            {
-                //printf("Left %d \n", BinIndex );
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
-                //printVector(BinMembers);
-            }
-            else if(Location.Right) // must be the right side
-            {
-                //printf("Right %d \n", BinIndex );
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
-                BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
-                //printVector(BinMembers);
-            }
-            else
-            {
-              printf("Getting another bin case\n");
-            }
+            //  }
+            // else if(Location.Left)  // not in a corner on the left side
+            // {
+            //     //printf("Left %d \n", BinIndex );
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthEast].begin(),Bins[NeighborIndex.NorthEast].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.East].begin(),Bins[NeighborIndex.East].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthEast].begin(),Bins[NeighborIndex.SouthEast].end());
+            //     //printVector(BinMembers);
+            // }
+            // else if(Location.Right) // must be the right side
+            // {
+            //     //printf("Right %d \n", BinIndex );
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.NorthWest].begin(),Bins[NeighborIndex.NorthWest].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.North].begin(),Bins[NeighborIndex.North].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.West].begin(),Bins[NeighborIndex.West].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.SouthWest].begin(),Bins[NeighborIndex.SouthWest].end());
+            //     BinMembers.insert(BinMembers.end(),Bins[NeighborIndex.South].begin(),Bins[NeighborIndex.South].end());
+            //     //printVector(BinMembers);
+            // }
+            // else
+            // {
+            //   printf("Getting another bin case\n");
+            // }
 
-            for(int Inside_Bin = 0; Inside_Bin < Bins[BinIndex].size(); Inside_Bin++)
-            {
-                int Index = Bins[BinIndex][Inside_Bin];
-                // particles[Index].ax = particles[Index].ay = 0;
+            // for(int Inside_Bin = 0; Inside_Bin < Bins[BinIndex].size(); Inside_Bin++)
+            // {
+            //     int Index = Bins[BinIndex][Inside_Bin];
+            //     // particles[Index].ax = particles[Index].ay = 0;
 
-                for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
-                {
-                    int Index2 = Bins[BinIndex][Inside_BinJ];
+            //     for(int Inside_BinJ =0; Inside_BinJ < Bins[BinIndex].size(); Inside_BinJ++)
+            //     {
+            //         int Index2 = Bins[BinIndex][Inside_BinJ];
+            //         printf("Interaction!\n");
+            //         apply_force( particles[Index], particles[Index2], &dmin, &davg, &navg);
+            //         //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
+            //     }
+
+            // }
+
+            // //printf(" There will be %d x %d interactions\n",Bins[BinIndex].size(), BinMembers.size());
+            // // force to neighbors
+            // for(int calcForceindexI = 0; calcForceindexI < Bins[BinIndex].size(); calcForceindexI++ )
+            // {
+            //     // apply forces
+
+            //     int ParticleThisBin = Bins[BinIndex][calcForceindexI];    ////// PERFECT
+            //         // once the force is applied awesome the accel is zero.
+            //     // particlesSOA->ax[ParticleThisBin] = 0;
+            //     // particlesSOA->ay[ParticleThisBin] = 0;
+
+            //     for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
+            //     {
                     
-                    apply_force( particles[Index], particles[Index2], &dmin, &davg, &navg);
-                    //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
-                }
+            //         //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
+            //         apply_force( particles[ParticleThisBin], particles[ BinMembers[calcForceindexJ] ], &dmin, &davg, &navg);
+            //         //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
+            //         //printf("Interaction!%f:%f:%f\n",dmin,davg, navg);
+            //      }
+            // }
 
-            }
+            // /// ghost particles
+            // // top row
+            // if((rank > 0) && (Location.Top == true) )
+            // {
+            //     for(int GhostTopBin = 0; GhostTopBin < Bins[BinIndex].size(); GhostTopBin++)
+            //     {
+            //         int Index = Bins[BinIndex][GhostTopBin];
+            //         // particles[Index].ax = particles[Index].ay = 0;
 
-            //printf(" There will be %d x %d interactions\n",Bins[BinIndex].size(), BinMembers.size());
-            // force to neighbors
-            for(int calcForceindexI = 0; calcForceindexI < Bins[BinIndex].size(); calcForceindexI++ )
-            {
-                // apply forces
+            //         for (int calcForceindexJ = 0; calcForceindexJ < TopGhostBinMembers.size(); calcForceindexJ++ )
+            //         {
 
-                int ParticleThisBin = Bins[BinIndex][calcForceindexI];    ////// PERFECT
-                    // once the force is applied awesome the accel is zero.
-                // particlesSOA->ax[ParticleThisBin] = 0;
-                // particlesSOA->ay[ParticleThisBin] = 0;
+            //             apply_force( particles[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
+            //             //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
+            //         }
 
-                for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
-                {
-                    //printf("Interaction!\n");
-                    //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
-                    apply_force( particles[ParticleThisBin], particles[ BinMembers[calcForceindexJ] ], &dmin, &davg, &navg);
-                    //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
-                 }
-            }
+            //     }
+            // }
 
-            /// ghost particles
-            // top row
-            if((rank > 0) && (Location.Top == true) )
-            {
-                for(int GhostTopBin = 0; GhostTopBin < Bins[BinIndex].size(); GhostTopBin++)
-                {
-                    int Index = Bins[BinIndex][GhostTopBin];
-                    // particles[Index].ax = particles[Index].ay = 0;
+            // /// bottom row
+            // if( (rank < (n_proc -1) ) && (Location.Bottom == true) )
+            // {
+            //     for(int GhostBottomBin = 0; GhostBottomBin < Bins[BinIndex].size(); GhostBottomBin++)
+            //     {
+            //         int Index = Bins[BinIndex][GhostBottomBin];
+            //         // particles[Index].ax = particles[Index].ay = 0;
 
-                    for (int calcForceindexJ = 0; calcForceindexJ < TopGhostBinMembers.size(); calcForceindexJ++ )
-                    {
-
-                        apply_force( particles[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
-                        //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
-                    }
-
-                }
-            }
-
-            /// bottom row
-            if( (rank < (n_proc -1) ) && (Location.Bottom == true) )
-            {
-                for(int GhostBottomBin = 0; GhostBottomBin < Bins[BinIndex].size(); GhostBottomBin++)
-                {
-                    int Index = Bins[BinIndex][GhostBottomBin];
-                    // particles[Index].ax = particles[Index].ay = 0;
-
-                    for (int calcForceindexJ = 0; calcForceindexJ < BottomGhostBinMembers.size(); calcForceindexJ++ )
-                    {
+            //         for (int calcForceindexJ = 0; calcForceindexJ < BottomGhostBinMembers.size(); calcForceindexJ++ )
+            //         {
                        
-                        apply_force( particles[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
-                        //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
-                    }
+            //             apply_force( particles[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
+            //             //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
+            //         }
 
-                }
-            }
+            //     }
+            // }
 
             BinMembers.clear();
 
@@ -617,8 +651,14 @@ int main(int argc, char **argv)
         fclose( fsave );
     
     MPI_Finalize( );
+
+    // #ifdef DEBUG
+    // printf("Rank %d Leaving %s:%s\n",rank,__func__,__LINE__);
+    // #endif
     
     return 0;
+
+
 }
 
 
@@ -633,6 +673,9 @@ int main(int argc, char **argv)
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank)
 { // send particles to the correct processor based on which bin the particle is in and what processor the bin belongs to. 
 
+    #ifdef DEBUG2
+    printf("Rank %d Entering %s:%d\n",rank,__func__,__LINE__);
+    #endif
 
     //int *partition_offsets = (int*) malloc( (n_proc+1) * sizeof(int) );
     //std::vector<int> partition_offsets(NumberofProcessors);
@@ -642,6 +685,9 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
     //std::vector<int> partition_sizes(NumberofProcessors);
     
 
+    #ifdef DEBUG2
+    printf("Rank %d Entering ParticlesPerProcecesor:%d\n",rank,__LINE__);
+    #endif
     std::vector< std::vector<particle_t> > ParticlesPerProcecesor(NumberofProcessors,std::vector<particle_t>() );
     std::vector<particle_t>  particlesassignedtoproc;
 
@@ -651,9 +697,16 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
         for(int particleIndex = 0; particleIndex < NumofParticles; particleIndex++)
         {
 
+            #ifdef DEBUG2
+            printf("Rank %d Entering MapParticleToProc:%d\n",rank,__LINE__);
+            #endif
             int ProcNumber = MapParticleToProc(particles[particleIndex],NumofBinsEachSide,NumberofProcessors);
             ParticlesPerProcecesor[ProcNumber].push_back(particles[particleIndex]); // add the the vector at each index
             //printf("Particle assigned to procnum %d\n",ProcNumber );
+
+            #ifdef DEBUG3
+            printf("Rank %d Particle: %d X: %f Y: %f Assigned to Proc: %d:%d\n",rank,particleIndex,particles[particleIndex].x,particles[particleIndex].y,ProcNumber,__LINE__);
+            #endif
         }
 
         // append all the particles to particlesassignedtoproc 0 to NumberofProcessors
@@ -695,6 +748,10 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
 
     free(local);
 
+    #ifdef DEBUG2
+    printf("Rank %d Leaving %s:%d\n",rank,__func__,__LINE__);
+    #endif
+
     return temp;
 
     // pharaoh, let my particles go!!!!
@@ -707,6 +764,11 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
 void GhostParticles(const int rank,const int n,const int NumberofProcessors, const int NumberoflocalBins, const int LocalNumofBinsEachSide, std::vector <particle_t> & GhostParticleTopVector,std::vector <particle_t> & GhostParticleBottomVector, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec)
 { //These are redundant particles that exists on other processors but, are needed for computing forces on the local processor. 
     // since we can't request the particle it make more sense for each processor to send them to it's peers. 
+
+    #ifdef DEBUG2
+    printf("Rank %d Entering %s:%d\n",rank,__func__,__LINE__);
+    #endif
+
     std::vector<int> BoarderPeers = getBoarderPeers(rank,NumberofProcessors);
     // Send border particles to neighbors
     #ifdef DEBUG
@@ -721,17 +783,23 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
 
             if(Peer < rank)
             {
-                OutgoingParticles[Peer] = getGhostParticlesTop(rank,LocalNumofBinsEachSide, NumberofProcessors,LocalBins, localParticleVec);
+                #ifdef DEBUG2
+                printf("Rank %d Entering getGhostParticlesTop:%d\n",rank,__LINE__);
+                #endif
+                getGhostParticlesTop(rank,LocalNumofBinsEachSide, NumberofProcessors,LocalBins, localParticleVec);
+                //OutgoingParticles[Peer] = getGhostParticlesTop(rank,LocalNumofBinsEachSide, NumberofProcessors,LocalBins, localParticleVec);
             }
             else if(Peer > rank)  // peer is bigger 
             {
-                OutgoingParticles[Peer] = getGhostParticlesBottom(rank,LocalNumofBinsEachSide, NumberoflocalBins, NumberofProcessors,LocalBins, localParticleVec);
+                #ifdef DEBUG2
+                printf("Rank %d Entering getGhostParticlesBottom:%d\n",rank,__LINE__);
+                #endif
+                getGhostParticlesBottom(rank,LocalNumofBinsEachSide, NumberoflocalBins, NumberofProcessors,LocalBins, localParticleVec);
+                //OutgoingParticles[Peer] = getGhostParticlesBottom(rank,LocalNumofBinsEachSide, NumberoflocalBins, NumberofProcessors,LocalBins, localParticleVec);
             }
             else
             {
-            #ifdef DEBUG
                 printf("We have a bug in the send of GhostParticles Peer: %d Rank %d\n", Peer, rank);
-            #endif
             }
 
             // if(OutgoingParticles[Peer].empty() == false) 
@@ -795,6 +863,10 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
         // add total to the local count 
         //*nlocal += RecvCount;
         free(GhostParticleRecvBuffer);
+
+    #ifdef DEBUG2
+    printf("Rank %d Leaving %s:%d\n",rank,__func__,__LINE__);
+    #endif
     }
     // freee 
     
@@ -805,11 +877,21 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
     // moved particles 
     // outgoing particles 
 
+    #ifdef DEBUG2
+    printf("Rank %d Entering %s:%d\n",rank,__func__,__LINE__);
+    #endif
+
+    #ifdef DEBUG2
+    printf("Rank %d Entering getLocalXSize:%d\n",rank,__LINE__);
+    #endif
     double Xsize = getLocalXSize();
     double Ysize = getLocalYSize();
 
     std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
 
+    #ifdef DEBUG2
+    printf("Rank %d Entering MapParticleToProc LOOP :%d\n",rank,__LINE__);
+    #endif
     std::vector<int> OutgoingIndexes; 
     for( int i = 0; i < localparticleVector.size(); i++ )
     {
@@ -819,6 +901,8 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
         //this is the global n=bin number
         // int BinNum = MapParticleToBin(localparticleVector[i],NumofBinsEachSide);
         // int procNum = MapBinToProc(BinNum,NumberofProcessors);
+
+
         int procNum = MapParticleToProc(localparticleVector[i],NumofBinsEachSide,NumberofProcessors);
 
         if(procNum != rank)
@@ -867,7 +951,7 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
             int RecvCount = 0;
             MPI_Status status;
         #ifdef DEBUG
-            printf("Waiting for a message from rank %d \n",ProcIdRecv);
+            printf("Rank %d Waiting for a message from rank %d \n",rank,ProcIdRecv);
         #endif
             //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
             MPI_Recv(MovedParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 0, MPI_COMM_WORLD, &status);
@@ -888,5 +972,9 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
     }
     // freee 
     free(MovedParticleRecvBuffer);
+
+    #ifdef DEBUG2
+    printf("Rank %d Leaving %s:%d\n",rank,__func__,__LINE__);
+    #endif
 }
 
