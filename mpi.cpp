@@ -570,7 +570,7 @@ int main(int argc, char **argv)
           }
         }
 
-    //MoveParticles(localParticleVector,rank, n, n_proc,NumofBinsEachSide);
+    MoveParticles(localParticleVector,rank, n, n_proc,NumofBinsEachSide);
     //             //
     //     //  move particles
     //     //
