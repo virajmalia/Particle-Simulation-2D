@@ -10,7 +10,7 @@
 
 //#define DEBUG 
 //#define DEBUG2
-#define DEBUG3
+//#define DEBUG3
 
 MPI_Datatype PARTICLE;
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank);
@@ -766,16 +766,14 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
                 #ifdef DEBUG2
                 printf("Rank %d Entering getGhostParticlesTop:%d\n",rank,__LINE__);
                 #endif
-                getGhostParticlesTop(rank,LocalNumofBinsEachSide, NumberofProcessors,LocalBins, localParticleVec);
-                //OutgoingParticles[Peer] = getGhostParticlesTop(rank,LocalNumofBinsEachSide, NumberofProcessors,LocalBins, localParticleVec);
+                OutgoingParticles[Peer] = getGhostParticlesTop(rank,LocalNumofBinsEachSide, NumberofProcessors,LocalBins, localParticleVec);
             }
             else if(Peer > rank)  // peer is bigger 
             {
                 #ifdef DEBUG2
                 printf("Rank %d Entering getGhostParticlesBottom:%d\n",rank,__LINE__);
                 #endif
-                getGhostParticlesBottom(rank,LocalNumofBinsEachSide, NumberoflocalBins, NumberofProcessors,LocalBins, localParticleVec);
-                //OutgoingParticles[Peer] = getGhostParticlesBottom(rank,LocalNumofBinsEachSide, NumberoflocalBins, NumberofProcessors,LocalBins, localParticleVec);
+                OutgoingParticles[Peer] = getGhostParticlesBottom(rank,LocalNumofBinsEachSide, NumberoflocalBins, NumberofProcessors,LocalBins, localParticleVec);
             }
             else
             {

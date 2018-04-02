@@ -9,16 +9,6 @@
 // this is for the viz script 
 //#define VIZ
 
-void printVector(std::vector<int> A)
-{
-    printf("Vector: ");
-    for(int y=0; y< A.size(); y++)
-    {
-        printf("%d ",A[y]);
-    }
-    printf("\n");
-
-}
 //
 //  benchmarking program
 //
