@@ -96,7 +96,7 @@ int main( int argc, char **argv )
        davg = 0.0;
        dmin = 1.0;
 
-        for(int clear = 0; clear < NumofBins; clear++ )
+        for(int clear = 0; clear < Bins.size(); clear++ )
         {
             Bins[clear].clear();
         }

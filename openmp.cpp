@@ -92,7 +92,7 @@ int main( int argc, char **argv )
        dmin = 1.0;
 
         #pragma omp for
-        for(int clear = 0; clear < NumofBins; clear++ )
+        for(int clear = 0; clear < Bins.size(); clear++ )
         {
             Bins[clear].clear();
         }

@@ -335,18 +335,6 @@ Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBins
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////// MPI /////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-Bin_Location_t GetBinLocationMPI(const int BinIndex, const int NumofBinsEachSide,const int NumofBins )
-{
-
-    Bin_Location_t Temp; 
-
-    Temp.Left = ((BinIndex%NumofBinsEachSide) == 0) ? true : false;
-    Temp.Right = ((BinIndex%NumofBinsEachSide) == (NumofBinsEachSide-1) ) ? true : false;
-    Temp.Top =  ((BinIndex < NumofBinsEachSide) )? true : false;
-    Temp.Bottom = ((BinIndex > (NumofBins - NumofBinsEachSide - 1) ) )? true : false;
-
-    return Temp; 
-}
 
 Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex)
 {// assumes only the top or bottom row!
@@ -370,7 +358,7 @@ Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex)
 int getRowsPerProc(int NumberOfBinsperSide, int NumberofProcessors)
 {  // we are just dividing the space up by row 
     // need to convert to a float first otherwise the value will be rounded down. 
-    return ceil((float)NumberOfBinsperSide/NumberofProcessors);
+    return floor((float)NumberOfBinsperSide/NumberofProcessors);
 }
 
 
@@ -593,7 +581,16 @@ int MapBinToProc(const int GlobalBin, const int NumberofProcessors, const int Nu
 
     int RowsPerProc = getRowsPerProc(NumberOfBinsperSide,NumberofProcessors); 
 
-    return floor(GlobalBin / (NumberOfBinsperSide * RowsPerProc) ); // assuming localbins are the same lenght as the global bins. 
+    int MostBins = (NumberofProcessors-1) * NumberOfBinsperSide * RowsPerProc;
+
+    if(GlobalBin < MostBins)
+    {
+        return floor(GlobalBin / (NumberOfBinsperSide * RowsPerProc) ); // assuming localbins are the same size as the global bins. 
+    }
+    else
+    { // the remainder
+        return (NumberofProcessors -1);
+    }
 }
 
 int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
@@ -615,7 +612,7 @@ int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide)
 
 int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors )
 {   // this will retun the processor to which a given particle belongs. 
-    int BinNum = MapParticleToBin(particle,NumofBinsEachSide);
+    int BinNum = MapParticleToBin(particle,NumofBinsEachSide); // global map!!
     return MapBinToProc(BinNum,NumberofProcessors,NumofBinsEachSide);
 }
 // int getProcessorForBin(int Bin)
