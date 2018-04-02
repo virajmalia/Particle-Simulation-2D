@@ -16,6 +16,16 @@ Local_Space_t LocalSpaceInfo;
 #define min_r_SQ (min_r*min_r)
 #define dt      0.0005
 
+void printVector(std::vector<int> A)
+{
+    printf("Vector: ");
+    for(int y=0; y< A.size(); y++)
+    {
+        printf("%d ",A[y]);
+    }
+    printf("\n");
+
+}
 
 //
 //  timer

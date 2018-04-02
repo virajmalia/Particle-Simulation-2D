@@ -83,6 +83,7 @@ typedef struct
 } Neighbor_Indexes_t;
 
 
+void printVector(std::vector<int> A);
 //
 //  timing routines
 //
@@ -91,6 +92,7 @@ double read_timer( );
 //
 //  simulation routines
 //
+
 void set_size( int n );
 int getNumberofBins( double size);
 double getSize();

@@ -13,16 +13,6 @@
   #include <sys/stat.h>
 #endif
 
-void printVector(std::vector<int> A)
-{
-    printf("Vector: ");
-    for(int y=0; y< A.size(); y++)
-    {
-        printf("%d ",A[y]);
-    }
-    printf("\n");
-
-}
 //
 //  benchmarking program
 //

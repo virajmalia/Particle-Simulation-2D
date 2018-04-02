@@ -10,7 +10,7 @@
 
 //#define DEBUG 
 //#define DEBUG2
-//#define DEBUG3
+#define DEBUG3
 
 MPI_Datatype PARTICLE;
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank);
@@ -23,7 +23,7 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
 int main(int argc, char **argv)
 {
     int navg, nabsavg=0;
-    double dmin, absmin=1.0,davg,absavg=0.0;
+    double dmin = 0.0, absmin=1.0,davg = 0.0,absavg=0.0;
     double rdavg,rdmin;
     int rnavg; 
 
@@ -122,6 +122,8 @@ int main(int argc, char **argv)
     printf("Rank: %d Total number of Global bins %d \n", rank, NumofBins);
     #endif
 
+    printf("Num of bins each side: %d size is: %f BinSize: %f \n", NumofBinsEachSide, getSize(), getBinSize());
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,9 +146,9 @@ int main(int argc, char **argv)
 
     int LocalNumberofBins = getNumberofBinsLocal(NumofBinsEachSide, NumofBins, rank,n_proc);
 
-    #ifdef DEBUG
+    //#ifdef DEBUG
     printf("Rank: %d Has %d Numbinseach side and a total of %d Bins\n", rank, NumofBinsEachSide,LocalNumberofBins);
-    #endif
+    //#endif
 
     set_local_space(size, rank, NumofBinsEachSide, n_proc);
 
@@ -467,10 +469,8 @@ int main(int argc, char **argv)
                 for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
                 {
                     
-                    //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
-                    apply_force( particles[ParticleThisBin], particles[ BinMembers[calcForceindexJ] ], &dmin, &davg, &navg);
-                    //apply_force_SOA( particlesSOA,ParticleThisBin, BinMembers[calcForceindexJ], &dmin, &davg, &navg);
-                    //printf("Interaction!%f:%f:%f\n",dmin,davg, navg);
+                    apply_force( localParticleVector[ParticleThisBin], localParticleVector[ BinMembers[calcForceindexJ] ], &dmin, &davg, &navg);
+                    //printf("Interaction! dmin %f: davg %f: navg %f\n",dmin,davg, navg);
                  }
             }
 
@@ -486,8 +486,7 @@ int main(int argc, char **argv)
                     for (int calcForceindexJ = 0; calcForceindexJ < TopGhostBinMembers.size(); calcForceindexJ++ )
                     {
 
-                        apply_force( particles[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
-                        //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
+                        apply_force( localParticleVector[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
                     }
 
                 }
@@ -504,8 +503,7 @@ int main(int argc, char **argv)
                     for (int calcForceindexJ = 0; calcForceindexJ < BottomGhostBinMembers.size(); calcForceindexJ++ )
                     {
                        
-                        apply_force( particles[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
-                        //apply_force_SOA( particlesSOA,Index, Inside_BinJ, &dmin, &davg, &navg);
+                        apply_force( localParticleVector[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
                     }
 
                 }
@@ -525,6 +523,8 @@ int main(int argc, char **argv)
 
     } // end of bin calcs
 
+
+        MoveParticles(localParticleVector,rank, n, n_proc,NumofBinsEachSide);
         // //
         // //  save current step if necessary (slightly different semantics than in other codes)
         // //
@@ -548,6 +548,8 @@ int main(int argc, char **argv)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         if( find_option( argc, argv, "-no" ) == -1 )
         { //This should stay the same 
+
+            //printf("Rank: %d davg %f navg %f dmin %f \n", rank, davg, navg, dmin);
           
           MPI_Reduce(&davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
           MPI_Reduce(&navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
@@ -570,7 +572,6 @@ int main(int argc, char **argv)
           }
         }
 
-    MoveParticles(localParticleVector,rank, n, n_proc,NumofBinsEachSide);
     //             //
     //     //  move particles
     //     //
