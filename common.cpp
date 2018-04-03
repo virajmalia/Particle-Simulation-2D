@@ -432,7 +432,9 @@ std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumo
 
     if( (rank > 0 ) )  // if rank 0 and numprocessors is 1 we don't have any peers
     {
-        for(int BinNum = 0; BinNum < LocalBins.size(); BinNum++) 
+        int limit = std::min(LocalNumofBinsEachSide,(int)LocalBins.size());
+
+        for(int BinNum = 0; BinNum < limit; BinNum++) 
         {
             //printf("Local size is : %d, BinsEachSide is %d \n", LocalBins.size(),LocalNumofBinsEachSide );
             for(int Ghostparticle = 0; Ghostparticle < LocalBins[BinNum].size();Ghostparticle++)
