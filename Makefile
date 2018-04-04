@@ -7,8 +7,8 @@ CC = icpc
 #CC = g++
 MPCC = mpicxx -cxx=icpc
 OPENMP = -qopenmp
-#CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops -march=core-avx2 -vec -std=c++11
-CFLAGS = -g -std=c++11
+CFLAGS = -g -O3 -xHOST -Ofast -march=core-avx2 -funroll-loops -march=core-avx2 -vec -std=c++11
+#CFLAGS = -g -std=c++11
 LIBS =
 
 

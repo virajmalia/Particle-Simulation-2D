@@ -477,9 +477,12 @@ int main(int argc, char **argv)
 
                 for (int calcForceindexJ = 0; calcForceindexJ < BinMembers.size(); calcForceindexJ++ )
                 {
-                    
-                    apply_force( localParticleVector[ParticleThisBin], localParticleVector[ BinMembers[calcForceindexJ] ], &dmin, &davg, &navg);
+                    int SecondParticle = BinMembers[calcForceindexJ];
+
+                    apply_force( localParticleVector[ParticleThisBin], localParticleVector[ SecondParticle], &dmin, &davg, &navg);
                     //printf("Interaction! dmin %f: davg %f: navg %f\n",dmin,davg, navg);
+
+                   //printf("Rank %d: ax: %f ay %f \n" ,rank,localParticleVector[ParticleThisBin].ax,localParticleVector[ParticleThisBin].ay);
                  }
             }
 
@@ -919,7 +922,7 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
             OutgoingParticles[procNum].push_back(localparticleVector[i]);
             OutgoingIndexes.push_back(i);
 
-            printf("Rank %d Mapped Particle %d X: %f Y %f To Proc %d\n",  rank, i,localparticleVector[i].x, localparticleVector[i].y, procNum);
+           //printf("Rank %d Mapped Particle %d X: %f Y %f To Proc %d\n",  rank, i,localparticleVector[i].x, localparticleVector[i].y, procNum);
 
         }
     }
@@ -929,7 +932,7 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
 
     for(auto index:OutgoingIndexes)
     { // remove outgoing partices from local buffer
-        printf("Rank %d Removing particle %d\n",  rank, index);
+        //printf("Rank %d Removing particle %d\n",  rank, index);
 
         localparticleVector.erase(localparticleVector.begin()+index); // remove particle from our local group. 
         //*nlocal = (*nlocal)-1; // hope we don't lose comms!

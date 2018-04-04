@@ -183,6 +183,8 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
     double coef = ( 1 - cutoff / r ) / r2 / mass;
     particle.ax += coef * dx;
     particle.ay += coef * dy;
+
+    //printf("Inside AF ax: %f ay %f \n", particle.ax,particle.ay );
 }
 
 
@@ -432,7 +434,7 @@ std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumo
 
     if( (rank > 0 ) )  // if rank 0 and numprocessors is 1 we don't have any peers
     {
-        int limit = std::min(LocalNumofBinsEachSide,(int)LocalBins.size());
+        int limit = std::min(LocalNumofBinsEachSide,(int)LocalBins.size()); // we could have zero bins 
 
         //printf("Rank %d GhostTopBin ", rank);
 
