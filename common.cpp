@@ -434,16 +434,23 @@ std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumo
     {
         int limit = std::min(LocalNumofBinsEachSide,(int)LocalBins.size());
 
+        //printf("Rank %d GhostTopBin ", rank);
+
         for(int BinNum = 0; BinNum < limit; BinNum++) 
         {
             //printf("Local size is : %d, BinsEachSide is %d \n", LocalBins.size(),LocalNumofBinsEachSide );
+
             for(int Ghostparticle = 0; Ghostparticle < LocalBins[BinNum].size();Ghostparticle++)
             {
+                //printf(" %d ", BinNum);
                  GhostParticlesTop.push_back(localParticleVec[ LocalBins[BinNum][Ghostparticle] ]);
             }  
+
         }
 
     }
+
+    //printf("\n");
         
     return GhostParticlesTop;
 
@@ -455,20 +462,23 @@ std::vector<particle_t> getGhostParticlesBottom(const int rank, const int LocalN
 {
     std::vector<particle_t> GhostParticlesBottom;
 
+    //printf("Rank %d GhostBottomBin ", rank);
+
     if( (rank < (NumberofProcessors - 1) ))  // if rank 0 and numprocessors is 1 we don't have any peers  // if rank 0 and numprocessors is 1 we don't have any peers
     {
         for(int BinNum = (NumberoflocalBins - LocalNumofBinsEachSide); BinNum < NumberoflocalBins; BinNum++) 
         {
             for(int Ghostparticle = 0; Ghostparticle < LocalBins[BinNum].size();Ghostparticle++)
             {
-                 GhostParticlesBottom.push_back(localParticleVec[ LocalBins[BinNum][Ghostparticle] ]);
+                //printf(" %d ", BinNum);
+                GhostParticlesBottom.push_back(localParticleVec[ LocalBins[BinNum][Ghostparticle] ]);
             }  
         }
 
     }
 
     // PROC OF RANK = NUMBEROFPROC -1 DOES NOT HAVE A BOTTOM PEER
-        
+    //printf("\n");
     return GhostParticlesBottom;
 }
 
@@ -510,7 +520,6 @@ int MapGlobalBinToLocalBin(int rank, int GlobalBinNumber, int NumberOfBinsperSid
 
     return (GlobalBinNumber - (rank * NumberOfBinsperSide * RowsPerProc)); // assuming localbins are the same lenght as the global bins. 
 }
-
 
 
 

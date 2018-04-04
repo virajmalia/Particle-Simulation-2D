@@ -11,6 +11,7 @@
 //#define DEBUG 
 //#define DEBUG2
 //#define DEBUG3
+//#define DEBUG4
 
 MPI_Datatype PARTICLE;
 std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const int NumofParticles, const int NumofBinsEachSide, const int NumberofProcessors, const int rank);
@@ -70,7 +71,7 @@ int main(int argc, char **argv)
     // particle_t buf[BufferSize];
     // MPI_Buffer_attach( buf, BufferSize);
     #ifdef DEBUG
-    printf(" We are rank %d running with %d processors\n",rank, n_proc );
+    printf("Rank %d running with %d processors\n",rank, n_proc );
     #endif
     //
     //  allocate generic resources
@@ -119,10 +120,10 @@ int main(int argc, char **argv)
     //particle_t *local; //  = (particle_t*) malloc( nlocal * sizeof(particle_t) );
 
     #ifdef DEBUG
-    printf("Rank: %d Total number of Global bins %d \n", rank, NumofBins);
+    printf("Rank %d Total number of Global bins %d \n", rank, NumofBins);
     #endif
 
-    printf("Num of bins each side: %d size is: %f BinSize: %f \n", NumofBinsEachSide, getSize(), getBinSize());
+    printf("Rank %d Num of bins each side: %d size is: %f BinSize: %f \n", rank, NumofBinsEachSide, getSize(), getBinSize());
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -137,7 +138,7 @@ int main(int argc, char **argv)
     std::vector <particle_t> localParticleVector = ScatterParticlesToProcs(particles, n, NumofBinsEachSide, n_proc,rank); // bug in this function!
 
     #ifdef DEBUG
-    printf("ParticleVector is %d\n", localParticleVector.size());
+    printf("Rank %d ParticleVector is %d\n",rank, localParticleVector.size());
     #endif
     // // // // // MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,7 +148,7 @@ int main(int argc, char **argv)
     int LocalNumberofBins = getNumberofBinsLocal(NumofBinsEachSide, NumofBins, rank,n_proc);
 
     //#ifdef DEBUG
-    printf("Rank: %d Has %d Numbinseach side and a total of %d Bins\n", rank, NumofBinsEachSide,LocalNumberofBins);
+    printf("Rank %d Has %d NumBinsEachSide and a total of %d Bins\n", rank, NumofBinsEachSide,LocalNumberofBins);
     //#endif
 
     set_local_space(size, rank, NumofBinsEachSide, n_proc);
@@ -188,6 +189,8 @@ int main(int argc, char **argv)
 
                int BinX = (int)(localParticleVector[particleIndex].x/binsize);
                int BinY = (int)(localParticleVector[particleIndex].y/binsize);
+               localParticleVector[particleIndex].ax =0;
+               localParticleVector[particleIndex].ay =0;
                // int BinX = (int)(particlesSOA->x[particle]/binsize);
                // int BinY = (int)(particlesSOA->y[particle]/binsize);
                //printf("Adding particle\n");
@@ -215,19 +218,25 @@ int main(int argc, char **argv)
         GhostParticles(rank,n,n_proc, LocalNumberofBins, NumofBinsEachSide,GhostParticleTopVector,GhostParticleBottomVector, Bins, localParticleVector);
 
         //ghost particle binning......
+        //printf("Rank %d GhostTop: ", rank);
         for( int TopGhostIndex = 0; TopGhostIndex < GhostParticleTopVector.size(); TopGhostIndex++ )
         { // already sorted in the Y
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleTopVector[TopGhostIndex].x/binsize);
+            //printf(" %d ",BinX);
             GhostBinTop[BinX].push_back(BinX);
         }
+       //printf("\n");
 
+        //printf("Rank %d GhostBottom: ", rank);
         for( int BottomGhostIndex = 0; BottomGhostIndex < GhostParticleBottomVector.size(); BottomGhostIndex++ )
         {
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleBottomVector[BottomGhostIndex].x/binsize);
+            //printf(" %d ",BinX);
             GhostBinBottom[BinX].push_back(BinX);
         }
+        //printf("\n");
 
         // // store the particle indices from each surrounding bin.
         std::vector<int> BinMembers;
@@ -484,9 +493,13 @@ int main(int argc, char **argv)
                     // particles[Index].ax = particles[Index].ay = 0;
 
                     for (int calcForceindexJ = 0; calcForceindexJ < TopGhostBinMembers.size(); calcForceindexJ++ )
+                    //for (int calcForceindexJ = 0; calcForceindexJ < GhostParticleTopVector.size(); calcForceindexJ++ )
                     {
 
                         apply_force( localParticleVector[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
+
+                        //apply_force( localParticleVector[Index], GhostParticleTopVector[calcForceindexJ], &dmin, &davg, &navg);
+                        //printf("Rank %d Force applied between Top Row %d and Ghost %d \n", rank,Index,calcForceindexJ);
                     }
 
                 }
@@ -501,9 +514,13 @@ int main(int argc, char **argv)
                     // particles[Index].ax = particles[Index].ay = 0;
 
                     for (int calcForceindexJ = 0; calcForceindexJ < BottomGhostBinMembers.size(); calcForceindexJ++ )
+                    //for (int calcForceindexJ = 0; calcForceindexJ < GhostParticleBottomVector.size(); calcForceindexJ++ )   
                     {
                        
                         apply_force( localParticleVector[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
+                        
+                        //apply_force( localParticleVector[Index], GhostParticleBottomVector[calcForceindexJ], &dmin, &davg, &navg);
+                        //printf("Rank %d Force applied between Bottom Row %d and Ghost %d \n", rank,Index,calcForceindexJ);
                     }
 
                 }
@@ -555,8 +572,20 @@ int main(int argc, char **argv)
           MPI_Reduce(&navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
           MPI_Reduce(&dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
 
+          /// Check for lost particles!
+          #ifdef DEBUG4
+          int TotalParticles = 0;
+          int localParticles = (int)localParticleVector.size();
+          MPI_Reduce(&localParticles,&TotalParticles,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
+          #endif
+
           if (rank == 0)
           {
+
+            #ifdef DEBUG4
+            printf("We have %d particles of %d total\n",TotalParticles,n);
+            #endif
+
             //
             // Computing statistical data
             //
@@ -713,12 +742,13 @@ std::vector <particle_t> ScatterParticlesToProcs(particle_t *particles, const in
     particle_t * local = (particle_t*) malloc( nlocal * sizeof(particle_t) );
 
     // only process 0 will get the correct number :(
-    #ifdef DEBUG
-    printf("Rank: %d Will get %d particles with an offset of %d Particles assigned %d of %d \n",rank, partition_sizes[rank],partition_offsets[rank],particlesassignedtoproc.size(),NumofParticles);
-    #endif
 
     // scatter the particles to the processors. More scattered than the programmer's brain. 
     MPI_Scatterv( particlesassignedtoproc.data(), partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
+
+    #ifdef DEBUG
+    printf("Rank %d Will get %d particles with an offset of %d Particles assigned %d of %d \n",rank, partition_sizes[rank],partition_offsets[rank],particlesassignedtoproc.size(),NumofParticles);
+    #endif
 
     //printf("nlocal is %d \n", nlocal);
     // printf("local is %d \n", local);
@@ -752,7 +782,7 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
     std::vector<int> BoarderPeers = getBoarderPeers(rank,NumberofProcessors);
     // Send border particles to neighbors
     #ifdef DEBUG
-    printf("We are rank: %d with %d peers\n", rank,BoarderPeers.size());
+    printf("Rank %d with %d peers\n", rank,BoarderPeers.size());
     #endif
 
     std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
@@ -783,7 +813,7 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
             // if(OutgoingParticles[Peer].empty() == false) 
             // {
             #ifdef DEBUG
-                printf("Sending out particles: %d Rank %d to Peer %d\n", OutgoingParticles[Peer].size(), rank, Peer);
+                printf("Rank %d Sending %d to Peer %d\n", rank,OutgoingParticles[Peer].size(), Peer);
             #endif
                 MPI_Request request;
                 //MPI_Ibsend(&OutgoingParticles[Peer].data()[0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
@@ -862,8 +892,8 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
     #ifdef DEBUG2
     printf("Rank %d Entering getLocalXSize:%d\n",rank,__LINE__);
     #endif
-    double Xsize = getLocalXSize();
-    double Ysize = getLocalYSize();
+    //double Xsize = getLocalXSize();
+    //double Ysize = getLocalYSize();
 
     std::vector< std::vector<particle_t> > OutgoingParticles(NumberofProcessors,std::vector<particle_t>() );
 
@@ -885,8 +915,11 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
 
         if(procNum != rank)
         { // populate the list of outgoing particles 
+            //printf("Particle %d is being sent to Proc %d From Proc %d ",i ,procNum,rank);
             OutgoingParticles[procNum].push_back(localparticleVector[i]);
             OutgoingIndexes.push_back(i);
+
+            printf("Rank %d Mapped Particle %d X: %f Y %f To Proc %d\n",  rank, i,localparticleVector[i].x, localparticleVector[i].y, procNum);
 
         }
     }
@@ -896,6 +929,8 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
 
     for(auto index:OutgoingIndexes)
     { // remove outgoing partices from local buffer
+        printf("Rank %d Removing particle %d\n",  rank, index);
+
         localparticleVector.erase(localparticleVector.begin()+index); // remove particle from our local group. 
         //*nlocal = (*nlocal)-1; // hope we don't lose comms!
     }
@@ -907,10 +942,10 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
         if(ProcId != rank) // we are not sending particles to ourself. This rank's outgoing vector should be empty but, oh well 
         {
             #ifdef DEBUG
-                printf("%d Particles moved from Rank %d to Peer %d\n", OutgoingParticles[ProcId].size(), rank, ProcId);
+                printf("Rank %d moving %d to Peer %d\n",rank, OutgoingParticles[ProcId].size(), ProcId);
             #endif
                 MPI_Request request;
-                MPI_Isend(&OutgoingParticles[ProcId][0], OutgoingParticles[ProcId].size(), PARTICLE, ProcId, 0, MPI_COMM_WORLD, &request);
+                MPI_Isend(&OutgoingParticles[ProcId][0], OutgoingParticles[ProcId].size(), PARTICLE, ProcId, 2, MPI_COMM_WORLD, &request);
                 MPI_Request_free(&request);
 
         }
@@ -932,7 +967,7 @@ void MoveParticles(std::vector <particle_t> & localparticleVector,const int rank
             printf("Rank %d Waiting for a message from rank %d \n",rank,ProcIdRecv);
         #endif
             //int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag,MPI_Comm comm, MPI_Status *status)
-            MPI_Recv(MovedParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 0, MPI_COMM_WORLD, &status);
+            MPI_Recv(MovedParticleRecvBuffer, n, PARTICLE, ProcIdRecv, 2, MPI_COMM_WORLD, &status);
             
             // get the number of particles we have revieved 
             MPI_Get_count(&status, PARTICLE, &RecvCount);
