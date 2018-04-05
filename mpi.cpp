@@ -66,10 +66,6 @@ int main(int argc, char **argv)
     printf("Rank %d Entering %s:%d\n",rank,__func__,__LINE__);
     #endif
 
-    // apparently needed for Ibsend but yet the documentation never points this out. 
-    // int BufferSize = n * sizeof(particle_t);
-    // particle_t buf[BufferSize];
-    // MPI_Buffer_attach( buf, BufferSize);
     #ifdef DEBUG
     printf("Rank %d running with %d processors\n",rank, n_proc );
     #endif
@@ -819,7 +815,6 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
                 printf("Rank %d Sending %d to Peer %d\n", rank,OutgoingParticles[Peer].size(), Peer);
             #endif
                 MPI_Request request;
-                //MPI_Ibsend(&OutgoingParticles[Peer].data()[0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
                 MPI_Isend(&OutgoingParticles[Peer][0],OutgoingParticles[Peer].size(),PARTICLE,Peer,1,MPI_COMM_WORLD,&request);
                 MPI_Request_free(&request);
     }
