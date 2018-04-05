@@ -156,8 +156,8 @@ int main(int argc, char **argv)
     std::vector <particle_t> GhostParticleTopVector;
     std::vector <particle_t> GhostParticleBottomVector;
 
-    std::vector< std::vector<int> > GhostBinTop(LocalNumberofBins, std::vector<int>(0));
-    std::vector< std::vector<int> > GhostBinBottom(LocalNumberofBins, std::vector<int>(0));
+    std::vector< std::vector<int> > GhostBinTop(NumofBinsEachSide, std::vector<int>(0));
+    std::vector< std::vector<int> > GhostBinBottom(NumofBinsEachSide, std::vector<int>(0));
 
     //  simulate a number of time steps
     //
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleTopVector[TopGhostIndex].x/binsize);
             //printf(" %d ",BinX);
-            GhostBinTop[BinX].push_back(BinX);
+            GhostBinTop[BinX].push_back(TopGhostIndex);
         }
        //printf("\n");
 
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleBottomVector[BottomGhostIndex].x/binsize);
             //printf(" %d ",BinX);
-            GhostBinBottom[BinX].push_back(BinX);
+            GhostBinBottom[BinX].push_back(BottomGhostIndex);
         }
         //printf("\n");
 
@@ -359,7 +359,7 @@ int main(int argc, char **argv)
 
                 if(rank > 0) // we are not the top most space
                 {
-                    Neighbor_Indexes_t GhostTopIndex = GetGhostBinLocations(BinIndex);
+                    Neighbor_Indexes_t GhostTopIndex = GetGhostBinLocations(BinIndex,NumofBinsEachSide);
                     if( (Location.Left | Location.Right) == false)
                     {
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
@@ -414,18 +414,19 @@ int main(int argc, char **argv)
                 }
 
 
-                if(rank < (n_proc -1) ) // we are not the bottom most space
+                if(rank < (n_proc -1) ) // we are not the bottom most space but in the bottom row
                 {
-                    Neighbor_Indexes_t GhostBottomIndex = GetGhostBinLocations(BinIndex);
+                    Neighbor_Indexes_t GhostBottomIndex = GetGhostBinLocations(BinIndex,NumofBinsEachSide); // this is wrong need to be between 0 and binseachside
                     if( (Location.Left | Location.Right) == false)
                     {
+                        //printf("Inserting bin members from %d \n",GhostBottomIndex.South);
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
                     }
                     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
                     {
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.North].begin(),GhostBinBottom[GhostBottomIndex.North].end());
+                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
 
                     }
