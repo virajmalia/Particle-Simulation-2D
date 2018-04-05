@@ -220,7 +220,7 @@ int main(int argc, char **argv)
         { // already sorted in the Y
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleTopVector[TopGhostIndex].x/binsize);
-            printf("Ghost Bin Top    %d contains particle %d \n",BinX, TopGhostIndex);
+           // printf("Ghost Bin Top    %d contains particle %d \n",BinX, TopGhostIndex);
             GhostBinTop[BinX].push_back(TopGhostIndex);
         }
        //printf("\n");
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
         {
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleBottomVector[BottomGhostIndex].x/binsize);
-            printf("Ghost Bin Bottom %d contains particle %d \n",BinX, BottomGhostIndex);
+            //printf("Ghost Bin Bottom %d contains particle %d \n",BinX, BottomGhostIndex);
             GhostBinBottom[BinX].push_back(BottomGhostIndex);
         }
         //printf("\n");
@@ -364,21 +364,21 @@ int main(int argc, char **argv)
                     Neighbor_Indexes_t GhostTopIndex = GetGhostBinLocations(BinIndex,NumofBinsEachSide);
                     if( (Location.Left | Location.Right) == false)
                     {   
-                        printf("Rank %d Ghost Bin Top %d %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthWest,GhostTopIndex.NorthEast, BinIndex);
+                        //printf("Rank %d Ghost Bin Top %d %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthWest,GhostTopIndex.NorthEast, BinIndex);
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
                     }
                     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
                     {
-                        printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthWest, BinIndex);
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthWest, BinIndex);
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
 
                     }
                     else if ( Location.Left && (!Location.Right) )// left corner
                     {
-                        printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthEast, BinIndex);
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthEast, BinIndex);
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
                     }
@@ -424,14 +424,14 @@ int main(int argc, char **argv)
                     if( (Location.Left | Location.Right) == false)
                     {
                         //printf("Inserting bin members from %d \n",GhostBottomIndex.South);
-                        printf("Rank %d Ghost Bin Bottom %d %d %d paired with %d \n",rank,GhostBottomIndex.South,GhostBottomIndex.SouthWest,GhostBottomIndex.SouthEast, BinIndex);
+                        //printf("Rank %d Ghost Bin Bottom %d %d %d paired with %d \n",rank,GhostBottomIndex.South,GhostBottomIndex.SouthWest,GhostBottomIndex.SouthEast, BinIndex);
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
                     }
                     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
                     {
-                        printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank,GhostBottomIndex.South,GhostBottomIndex.SouthWest, BinIndex);
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank,GhostBottomIndex.South,GhostBottomIndex.SouthWest, BinIndex);
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
 
@@ -439,7 +439,7 @@ int main(int argc, char **argv)
                     else if ( Location.Left && (!Location.Right) )// left corner
                     {
 
-                        printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostBottomIndex.South, GhostBottomIndex.SouthEast, BinIndex);
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostBottomIndex.South, GhostBottomIndex.SouthEast, BinIndex);
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
                     }   
@@ -502,7 +502,7 @@ int main(int argc, char **argv)
                     for (int calcForceindexJ = 0; calcForceindexJ < TopGhostBinMembers.size(); calcForceindexJ++ )
                     //for (int calcForceindexJ = 0; calcForceindexJ < GhostParticleTopVector.size(); calcForceindexJ++ )
                     {
-                        printf("Rank %d Index %d Ghost Top %d \n",rank, Index, TopGhostBinMembers[calcForceindexJ]);
+                        //printf("Rank %d Index %d Ghost Top %d \n",rank, Index, TopGhostBinMembers[calcForceindexJ]);
                         apply_force( localParticleVector[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
 
                         //apply_force( localParticleVector[Index], GhostParticleTopVector[calcForceindexJ], &dmin, &davg, &navg);
@@ -523,7 +523,7 @@ int main(int argc, char **argv)
                     for (int calcForceindexJ = 0; calcForceindexJ < BottomGhostBinMembers.size(); calcForceindexJ++ )
                     //for (int calcForceindexJ = 0; calcForceindexJ < GhostParticleBottomVector.size(); calcForceindexJ++ )   
                     {
-                        printf("Rank %d Index %d Ghost Bottom %d \n",rank, Index, BottomGhostBinMembers[calcForceindexJ]);
+                        //printf("Rank %d Index %d Ghost Bottom %d \n",rank, Index, BottomGhostBinMembers[calcForceindexJ]);
                         apply_force( localParticleVector[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
                         
                         //apply_force( localParticleVector[Index], GhostParticleBottomVector[calcForceindexJ], &dmin, &davg, &navg);
