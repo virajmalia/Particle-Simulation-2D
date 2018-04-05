@@ -9,32 +9,26 @@
 #include <math.h>
 #include <time.h>
 #include <sys/time.h>
+#include <immintrin.h>
+#include <cmath> 
+#include <vector>
+#include <algorithm>
 
 inline int min( int a, int b ) { return a < b ? a : b; }
 inline int max( int a, int b ) { return a > b ? a : b; }
 
-//
-//  tuned constants
-//
-#define density 0.0005
-#define mass    0.01
-#define cutoff  0.01
-#define cutoffSQ (cutoff*cutoff)
-#define INVCutoff (1/cutoff)
-#define min_r   (cutoff/100)
-#define min_r_SQ (min_r*min_r)
-#define dt      0.0005
 
 //
 //  saving parameters
 //
 const int NSTEPS = 1000;
+//const int NSTEPS = 10;
 const int SAVEFREQ = 10;
 
 //
 // particle data structure
 //
-typedef struct 
+typedef struct
 {
   double x;    /// position X
   double y;    /// position y 
@@ -45,6 +39,53 @@ typedef struct
 } particle_t;
 
 //
+// particle data structure
+// This is a structure of Array. This was done since the access stride was not 1.
+//By converting to Structure of Arrays we can get an access stride of 1.
+typedef struct
+{
+	double * x;
+	double * y;
+	double * vx;
+	double * vy;
+	double * ax;
+	double * ay;
+
+} particle_SOA_t;
+
+
+typedef struct Local_Space
+{
+	double localSizeX;
+	double localSizeY; 
+	double Ceiling;
+	double Floor; 
+
+} Local_Space_t;
+
+typedef struct 
+{
+	bool Left;
+	bool Right;
+	bool Top;
+	bool Bottom;
+} Bin_Location_t; 
+
+typedef struct 
+{
+	int North;
+	int NorthEast;
+	int NorthWest;
+	int East;
+	int West;
+	int South;
+	int SouthEast;
+	int SouthWest;
+} Neighbor_Indexes_t;
+
+
+void printVector(std::vector<int> A);
+//
 //  timing routines
 //
 double read_timer( );
@@ -52,53 +93,43 @@ double read_timer( );
 //
 //  simulation routines
 //
+
 void set_size( int n );
+int getNumberofBins( double size);
+double getSize();
+double getBinSize();
 void init_particles( int n, particle_t *p );
-//void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg);
+void init_particles_SOA( int n, particle_SOA_t *p );
+void apply_force_SOA( particle_SOA_t &p,int I, int J, double *dmin, double *davg, int *navg);
+void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg);
 void move( particle_t &p );
+void move_SOA( particle_SOA_t &p,int I);
+Bin_Location_t GetBinLocation(const int BinIndex, const int NumofBinsEachSide,const int NumofBins );
+Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBinsEachSide);
 
-inline void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
-{
+Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex);
+int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
+int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int NumofBins, int rank, int NumberofProcessors);
 
-    double dx = neighbor.x - particle.x;
-    double dy = neighbor.y - particle.y;
+void set_local_space(double size, int rank, int GlobalNumberOfBinsEachSide, int NumberofProcessors);
+double getLocalYSize();
+double getLocalXSize();
+std::vector<particle_t> getGhostParticlesTop(const int rank, const int LocalNumofBinsEachSide, const int NumberofProcessors, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec);
+std::vector<particle_t> getGhostParticlesBottom(const int rank, const int LocalNumofBinsEachSide, const int NumberoflocalBins, const int NumberofProcessors, const std::vector< std::vector<int> > & LocalBins, const std::vector <particle_t> & localParticleVec);
 
-    // this takes 17 percent of the time. 
-    double r2 = dx * dx + dy * dy;   
-    double r = sqrt( r2 );
-    double rInvCutoff = r*INVCutoff;
-
-    if( r2 > cutoffSQ )
-        return;
-	if (r2 != 0)
-    {
-	   if (r2/(cutoffSQ) < *dmin * (*dmin))
-       {
-	      *dmin = rInvCutoff;
-       }
-           (*davg) += rInvCutoff;
-           (*navg) ++;
-    }
-		
-    r2 = fmax( r2, min_r_SQ);
-    r = sqrt( r2 );
- 
-    //
-    //  very simple short-range repulsive force
-    //
-    double coef = ( 1 - cutoff / r ) / r2 / mass;
-
-
-    particle.ax += coef * dx;
-    particle.ay += coef * dy;
-}
-
+std::vector<int> getBoarderPeers(int rank, int NumberofProcessors);
+int MaplocalBinToGlobalBin(int rank, int localbinNumber, int NumberOfBinsperSide,int NumberofProcessors);
+int MapGlobalBinToLocalBin(int rank, int GlobalBinNumber, int NumberOfBinsperSide,int NumberofProcessors);
+int MapBinToProc(const int GlobalBin, const int NumberofProcessors, const int NumberOfBinsperSide);
+int MapParticleToBin(particle_t &particle, const int NumofBinsEachSide);
+int MapParticleToProc(particle_t &particle, const int NumofBinsEachSide, const  int NumberofProcessors );
 
 //
 //  I/O routines
 //
 FILE *open_save( char *filename, int n );
 void save( FILE *f, int n, particle_t *p );
+void save_SOA( FILE *f, int n, particle_SOA_t *p );
 
 //
 //  argument processing routines
