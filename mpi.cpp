@@ -66,10 +66,6 @@ int main(int argc, char **argv)
     printf("Rank %d Entering %s:%d\n",rank,__func__,__LINE__);
     #endif
 
-    // apparently needed for Ibsend but yet the documentation never points this out. 
-    // int BufferSize = n * sizeof(particle_t);
-    // particle_t buf[BufferSize];
-    // MPI_Buffer_attach( buf, BufferSize);
     #ifdef DEBUG
     printf("Rank %d running with %d processors\n",rank, n_proc );
     #endif
@@ -156,12 +152,6 @@ int main(int argc, char **argv)
     std::vector< std::vector<int> > Bins(LocalNumberofBins, std::vector<int>(0));
 
 
-    // for ghost particles. 
-    std::vector <particle_t> GhostParticleTopVector;
-    std::vector <particle_t> GhostParticleBottomVector;
-
-    std::vector< std::vector<int> > GhostBinTop(LocalNumberofBins, std::vector<int>(0));
-    std::vector< std::vector<int> > GhostBinBottom(LocalNumberofBins, std::vector<int>(0));
 
     //  simulate a number of time steps
     //
@@ -171,6 +161,13 @@ int main(int argc, char **argv)
         navg = 0;
         dmin = 1.0;
         davg = 0.0;
+
+            // for ghost particles. 
+        std::vector <particle_t> GhostParticleTopVector;
+        std::vector <particle_t> GhostParticleBottomVector;
+
+        std::vector< std::vector<int> > GhostBinTop(NumofBinsEachSide, std::vector<int>(0));
+        std::vector< std::vector<int> > GhostBinBottom(NumofBinsEachSide, std::vector<int>(0));
 
         // clear bins 
         for(int clear = 0; clear < Bins.size(); clear++ )
@@ -189,8 +186,8 @@ int main(int argc, char **argv)
 
                int BinX = (int)(localParticleVector[particleIndex].x/binsize);
                int BinY = (int)(localParticleVector[particleIndex].y/binsize);
-               localParticleVector[particleIndex].ax =0;
-               localParticleVector[particleIndex].ay =0;
+               //localParticleVector[particleIndex].ax =0;
+               //localParticleVector[particleIndex].ay =0;
                // int BinX = (int)(particlesSOA->x[particle]/binsize);
                // int BinY = (int)(particlesSOA->y[particle]/binsize);
                //printf("Adding particle\n");
@@ -223,8 +220,8 @@ int main(int argc, char **argv)
         { // already sorted in the Y
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleTopVector[TopGhostIndex].x/binsize);
-            //printf(" %d ",BinX);
-            GhostBinTop[BinX].push_back(BinX);
+           // printf("Ghost Bin Top    %d contains particle %d \n",BinX, TopGhostIndex);
+            GhostBinTop[BinX].push_back(TopGhostIndex);
         }
        //printf("\n");
 
@@ -233,8 +230,8 @@ int main(int argc, char **argv)
         {
             double binsize = getBinSize();
             int BinX = (int)(GhostParticleBottomVector[BottomGhostIndex].x/binsize);
-            //printf(" %d ",BinX);
-            GhostBinBottom[BinX].push_back(BinX);
+            //printf("Ghost Bin Bottom %d contains particle %d \n",BinX, BottomGhostIndex);
+            GhostBinBottom[BinX].push_back(BottomGhostIndex);
         }
         //printf("\n");
 
@@ -363,22 +360,25 @@ int main(int argc, char **argv)
 
                 if(rank > 0) // we are not the top most space
                 {
-                    Neighbor_Indexes_t GhostTopIndex = GetGhostBinLocations(BinIndex);
+
+                    Neighbor_Indexes_t GhostTopIndex = GetGhostBinLocations(BinIndex,NumofBinsEachSide);
                     if( (Location.Left | Location.Right) == false)
-                    {
+                    {   
+                        //printf("Rank %d Ghost Bin Top %d %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthWest,GhostTopIndex.NorthEast, BinIndex);
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
                     }
                     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
                     {
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthWest, BinIndex);
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthWest].begin(),GhostBinTop[GhostTopIndex.NorthWest].end());
 
                     }
                     else if ( Location.Left && (!Location.Right) )// left corner
                     {
-
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostTopIndex.North,GhostTopIndex.NorthEast, BinIndex);
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.North].begin(),GhostBinTop[GhostTopIndex.North].end());
                         TopGhostBinMembers.insert(TopGhostBinMembers.end(),GhostBinTop[GhostTopIndex.NorthEast].begin(),GhostBinTop[GhostTopIndex.NorthEast].end());
                     }
@@ -418,24 +418,28 @@ int main(int argc, char **argv)
                 }
 
 
-                if(rank < (n_proc -1) ) // we are not the bottom most space
+                if(rank < (n_proc -1) ) // we are not the bottom most space but in the bottom row
                 {
-                    Neighbor_Indexes_t GhostBottomIndex = GetGhostBinLocations(BinIndex);
+                    Neighbor_Indexes_t GhostBottomIndex = GetGhostBinLocations(BinIndex,NumofBinsEachSide); // this is wrong need to be between 0 and binseachside
                     if( (Location.Left | Location.Right) == false)
                     {
+                        //printf("Inserting bin members from %d \n",GhostBottomIndex.South);
+                        //printf("Rank %d Ghost Bin Bottom %d %d %d paired with %d \n",rank,GhostBottomIndex.South,GhostBottomIndex.SouthWest,GhostBottomIndex.SouthEast, BinIndex);
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
                     }
                     else if( (!Location.Left) && Location.Right ) // Yes this would be called a corner case!!!
                     {
-                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.North].begin(),GhostBinBottom[GhostBottomIndex.North].end());
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank,GhostBottomIndex.South,GhostBottomIndex.SouthWest, BinIndex);
+                        BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthWest].begin(),GhostBinBottom[GhostBottomIndex.SouthWest].end());
 
                     }
                     else if ( Location.Left && (!Location.Right) )// left corner
                     {
 
+                        //printf("Rank %d Ghost Bin Top %d %d paired with %d \n",rank, GhostBottomIndex.South, GhostBottomIndex.SouthEast, BinIndex);
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.South].begin(),GhostBinBottom[GhostBottomIndex.South].end());
                         BottomGhostBinMembers.insert(BottomGhostBinMembers.end(),GhostBinBottom[GhostBottomIndex.SouthEast].begin(),GhostBinBottom[GhostBottomIndex.SouthEast].end());
                     }   
@@ -498,7 +502,7 @@ int main(int argc, char **argv)
                     for (int calcForceindexJ = 0; calcForceindexJ < TopGhostBinMembers.size(); calcForceindexJ++ )
                     //for (int calcForceindexJ = 0; calcForceindexJ < GhostParticleTopVector.size(); calcForceindexJ++ )
                     {
-
+                        //printf("Rank %d Index %d Ghost Top %d \n",rank, Index, TopGhostBinMembers[calcForceindexJ]);
                         apply_force( localParticleVector[Index], GhostParticleTopVector[TopGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
 
                         //apply_force( localParticleVector[Index], GhostParticleTopVector[calcForceindexJ], &dmin, &davg, &navg);
@@ -519,7 +523,7 @@ int main(int argc, char **argv)
                     for (int calcForceindexJ = 0; calcForceindexJ < BottomGhostBinMembers.size(); calcForceindexJ++ )
                     //for (int calcForceindexJ = 0; calcForceindexJ < GhostParticleBottomVector.size(); calcForceindexJ++ )   
                     {
-                       
+                        //printf("Rank %d Index %d Ghost Bottom %d \n",rank, Index, BottomGhostBinMembers[calcForceindexJ]);
                         apply_force( localParticleVector[Index], GhostParticleBottomVector[BottomGhostBinMembers[calcForceindexJ]], &dmin, &davg, &navg);
                         
                         //apply_force( localParticleVector[Index], GhostParticleBottomVector[calcForceindexJ], &dmin, &davg, &navg);
@@ -819,7 +823,6 @@ void GhostParticles(const int rank,const int n,const int NumberofProcessors, con
                 printf("Rank %d Sending %d to Peer %d\n", rank,OutgoingParticles[Peer].size(), Peer);
             #endif
                 MPI_Request request;
-                //MPI_Ibsend(&OutgoingParticles[Peer].data()[0], OutgoingParticles[Peer].size(), PARTICLE, Peer, 0, MPI_COMM_WORLD, &request);
                 MPI_Isend(&OutgoingParticles[Peer][0],OutgoingParticles[Peer].size(),PARTICLE,Peer,1,MPI_COMM_WORLD,&request);
                 MPI_Request_free(&request);
     }

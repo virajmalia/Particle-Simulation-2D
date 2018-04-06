@@ -107,7 +107,7 @@ void move_SOA( particle_SOA_t &p,int I);
 Bin_Location_t GetBinLocation(const int BinIndex, const int NumofBinsEachSide,const int NumofBins );
 Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBinsEachSide);
 
-Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex);
+Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex, const int NumberOfBinsperSide);
 int getRowsPerProc(int BinsEachSide, int NumberofProcessors );
 int getNumberofBinsLocal(int GlobalNumberOfBinsEachSide, int NumofBins, int rank, int NumberofProcessors);
 

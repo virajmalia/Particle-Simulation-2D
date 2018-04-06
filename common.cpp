@@ -352,7 +352,7 @@ Neighbor_Indexes_t GetNeighborBinIndexes(const int BinIndex, const int NumofBins
 //////////////////////////////////////////////////////////////////////////////////// MPI /////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex)
+Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex, const int NumberOfBinsperSide)
 {// assumes only the top or bottom row!
     Neighbor_Indexes_t Temp;
         // use for top host row
@@ -362,7 +362,7 @@ Neighbor_Indexes_t GetGhostBinLocations(const int BinIndex)
         Temp.East = -1;
         Temp.West = -1;
         // use for bottom  ghost row 
-        Temp.South = BinIndex;
+        Temp.South = BinIndex%NumberOfBinsperSide;
         Temp.SouthEast = Temp.South +1;
         Temp.SouthWest = Temp.South -1;
 
