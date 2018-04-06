@@ -119,7 +119,7 @@ int main(int argc, char **argv)
     printf("Rank %d Total number of Global bins %d \n", rank, NumofBins);
     #endif
 
-    printf("Rank %d Num of bins each side: %d size is: %f BinSize: %f \n", rank, NumofBinsEachSide, getSize(), getBinSize());
+    //printf("Rank %d Num of bins each side: %d size is: %f BinSize: %f \n", rank, NumofBinsEachSide, getSize(), getBinSize());
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
     int LocalNumberofBins = getNumberofBinsLocal(NumofBinsEachSide, NumofBins, rank,n_proc);
 
     //#ifdef DEBUG
-    printf("Rank %d Has %d NumBinsEachSide and a total of %d Bins\n", rank, NumofBinsEachSide,LocalNumberofBins);
+    //printf("Rank %d Has %d NumBinsEachSide and a total of %d Bins\n", rank, NumofBinsEachSide,LocalNumberofBins);
     //#endif
 
     set_local_space(size, rank, NumofBinsEachSide, n_proc);
@@ -186,8 +186,8 @@ int main(int argc, char **argv)
 
                int BinX = (int)(localParticleVector[particleIndex].x/binsize);
                int BinY = (int)(localParticleVector[particleIndex].y/binsize);
-               //localParticleVector[particleIndex].ax =0;
-               //localParticleVector[particleIndex].ay =0;
+               localParticleVector[particleIndex].ax =0;
+               localParticleVector[particleIndex].ay =0;
                // int BinX = (int)(particlesSOA->x[particle]/binsize);
                // int BinY = (int)(particlesSOA->y[particle]/binsize);
                //printf("Adding particle\n");
